@@ -54,7 +54,7 @@ export default function Home() {
                 <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">
                     Welcome to Courier Service
                 </h1>
-                <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200"></div>
+                <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label htmlFor="username" className="block text-sm font-medium text-gray-700">
@@ -100,6 +100,7 @@ export default function Home() {
                             Login
                         </button>
                     </form>
+                </div>
                 <p className="mt-4 text-sm text-center text-gray-600">
                     Don&apos;t have an account?{' '}
                     <Link href="/register" className="text-blue-500 hover:underline hover:text-blue-600">

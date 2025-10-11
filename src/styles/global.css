@@ -1,5 +1,5 @@
-/* src/styles/globals.css */
-@import "tailwindcss/preflight";
+/* src/styles/global.css */
+/* @import "tailwindcss/preflight"; */
 @import "tailwindcss";
 
 /* for light/dark mode */

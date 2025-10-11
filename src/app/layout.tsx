@@ -1,7 +1,7 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "../styles/globals.css";
+import "../styles/global.css";
 import Link from 'next/link';
 import SessionProviderWrapper from '../components/SessionProviderWrapper';
 import { logout } from '@/lib/auth-actions';
