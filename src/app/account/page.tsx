@@ -1,66 +1,112 @@
-// src/app/register/page.tsx
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
-export default function Register() {
-    const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [address, setAddress] = useState('');
-    const [city, setCity] = useState('');
-    const [state, setState] = useState('');
-    const [zip, setZip] = useState('');
-    const [phone, setPhone] = useState('');
+interface UserData {
+    id: string;
+    username: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    phone: string;
+}
+
+export default function MyAccount() {
+    const { data: session, status } = useSession();
     const router = useRouter();
+    const [userData, setUserData] = useState<UserData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [updating, setUpdating] = useState(false);
+
+    useEffect(() => {
+        if (status === 'authenticated') {
+            fetchUserData();
+        } else if (status === 'unauthenticated') {
+            router.push('/'); // Redirect if not logged in
+        }
+    }, [status, router]);
+
+    const fetchUserData = async () => {
+        try {
+            const res = await fetch('/api/user');
+            if (res.ok) {
+                const data = await res.json();
+                setUserData(data);
+            } else {
+                alert('Failed to load user data');
+            }
+        } catch (err) {
+            alert('Error: ' + String(err));
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (password !== confirmPassword) {
-            alert('Passwords do not match. Please try again.');
-            return;
-        }
+        if (!userData) return;
+
+        setUpdating(true);
         try {
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                body: JSON.stringify({ username, email, password, firstName, lastName, address, city, state, zip, phone }),
+            const res = await fetch('/api/user', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    username: userData.username,
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
+                    address: userData.address,
+                    city: userData.city,
+                    state: userData.state,
+                    zip: userData.zip,
+                    phone: userData.phone
+                }),
                 headers: { 'Content-Type': 'application/json' },
             });
             if (res.ok) {
-                router.push('/'); // Redirect to login after registration
+                alert('Account updated successfully!');
+                // Optionally refetch or redirect
             } else {
                 const { error } = await res.json();
-                alert('Registration failed: ' + error);
+                alert('Update failed: ' + error);
             }
         } catch (err) {
-            alert('Registration failed: ' + String(err));
+            alert('Error: ' + String(err));
+        } finally {
+            setUpdating(false);
         }
     };
+
+    if (status === 'loading' || loading) {
+        return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    }
+
+    if (!session || !userData) {
+        return null; // Will redirect via useEffect
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
             <div className="w-full max-w-md">
                 <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">
-                    Register
+                    My Account
                 </h1>
                 <div className="bg-white p-6 rounded-lg shadow-md border-2 border-gray-200">
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Username is read-only since it's tied to auth */}
                         <div className="flex flex-col">
-                            <label htmlFor="username" className="text-sm font-medium text-gray-700 mb-1">
+                            <label className="text-sm font-medium text-gray-700 mb-1">
                                 Username
                             </label>
                             <input
-                                id="username"
-                                type="text"
-                                value={username}
-                                onChange={e => setUsername(e.target.value)}
-                                placeholder="Username"
-                                className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                required
+                                type="username"
+                                value={userData.username}
+                                className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md bg-gray-100"
+                                readOnly
                             />
                         </div>
                         <div className="flex flex-col">
@@ -69,38 +115,9 @@ export default function Register() {
                             </label>
                             <input
                                 id="email"
-                                type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder="Email"
-                                className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                required
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <label htmlFor="password" className="text-sm font-medium text-gray-700 mb-1">
-                                Password
-                            </label>
-                            <input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                placeholder="Password"
-                                className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                required
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 mb-1">
-                                Confirm Password
-                            </label>
-                            <input
-                                id="confirmPassword"
-                                type="password"
-                                value={confirmPassword}
-                                onChange={e => setConfirmPassword(e.target.value)}
-                                placeholder="Confirm Password"
+                                type="text"
+                                value={userData.email}
+                                onChange={e => setUserData({ ...userData, email: e.target.value })}
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
@@ -112,9 +129,8 @@ export default function Register() {
                             <input
                                 id="firstName"
                                 type="text"
-                                value={firstName}
-                                onChange={e => setFirstName(e.target.value)}
-                                placeholder="First Name"
+                                value={userData.firstName}
+                                onChange={e => setUserData({ ...userData, firstName: e.target.value })}
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
@@ -126,22 +142,20 @@ export default function Register() {
                             <input
                                 id="lastName"
                                 type="text"
-                                value={lastName}
-                                onChange={e => setLastName(e.target.value)}
-                                placeholder="Last Name"
+                                value={userData.lastName}
+                                onChange={e => setUserData({ ...userData, lastName: e.target.value })}
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
                         <div className="flex flex-col">
                             <label htmlFor="address" className="text-sm font-medium text-gray-700 mb-1">
-                                Address (Street)
+                                Address
                             </label>
                             <input
                                 id="address"
                                 type="text"
-                                value={address}
-                                onChange={e => setAddress(e.target.value)}
-                                placeholder="Street Address"
+                                value={userData.address}
+                                onChange={e => setUserData({ ...userData, address: e.target.value })}
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
@@ -153,9 +167,8 @@ export default function Register() {
                             <input
                                 id="city"
                                 type="text"
-                                value={city}
-                                onChange={e => setCity(e.target.value)}
-                                placeholder="Anytown"
+                                value={userData.city}
+                                onChange={e => setUserData({ ...userData, city: e.target.value })}
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
@@ -167,9 +180,8 @@ export default function Register() {
                             <input
                                 id="state"
                                 type="text"
-                                value={state}
-                                onChange={e => setState(e.target.value)}
-                                placeholder="CA"
+                                value={userData.state}
+                                onChange={e => setUserData({ ...userData, state: e.target.value })}
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
@@ -181,9 +193,8 @@ export default function Register() {
                             <input
                                 id="zip"
                                 type="text"
-                                value={zip}
-                                onChange={e => setZip(e.target.value)}
-                                placeholder="12345"
+                                value={userData.zip}
+                                onChange={e => setUserData({ ...userData, zip: e.target.value })}
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
@@ -195,26 +206,23 @@ export default function Register() {
                             <input
                                 id="phone"
                                 type="text"
-                                value={phone}
-                                onChange={e => setPhone(e.target.value)}
-                                placeholder="Phone"
+                                value={userData.phone}
+                                onChange={e => setUserData({ ...userData, phone: e.target.value })}
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
                         </div>
                         <div className="flex flex-col items-center">
-                            <button type="submit" className="w-full max-w-xs bg-blue-500 text-white py-3 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
-                                Register
+                            <button
+                                type="submit"
+                                disabled={updating}
+                                className="w-full max-w-xs bg-blue-500 text-white py-3 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50"
+                            >
+                                {updating ? 'Updating...' : 'Update Account'}
                             </button>
                         </div>
                     </form>
                 </div>
-                <p className="mt-4 text-sm text-center text-gray-600">
-                    Already have an account?{' '}
-                    <Link href="/" className="text-blue-500 underline hover:text-blue-600">
-                        Login
-                    </Link>
-                </p>
             </div>
         </div>
     );

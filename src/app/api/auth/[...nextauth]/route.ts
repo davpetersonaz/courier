@@ -21,7 +21,12 @@ export const authOptions: AuthOptions = {
                     where: { username: credentials.username },
                 });
                 if (user && bcrypt.compareSync(credentials.password, user.password)) {
-                    return { id: user.id.toString(), name: user.firstName, email: user.email, username: user.username };
+                    return {
+                        id: user.id.toString(),
+                        name: user.firstName,
+                        email: user.email,
+                        username: user.username
+                    };
                 }
                 return null;
             },
@@ -32,6 +37,22 @@ export const authOptions: AuthOptions = {
     },
     session: {
         strategy: 'jwt',
+    },
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user) {
+                token.id = user.id;
+                token.username = user.username;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            if (token) {
+                session.user.id = token.id as string;
+                session.user.username = token.username as string;
+            }
+            return session;
+        },
     },
 };
 

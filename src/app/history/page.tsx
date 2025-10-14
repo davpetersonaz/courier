@@ -16,22 +16,42 @@ export default async function History() {
         );
     }
 
-    const orders = await prisma.order.findMany({
-        where: { customerId: parseInt(session.user.id) },
-        include: { history: true },
-    });
+    let orders: (Order & { history: OrderHistory[] })[] = [];
+    try {
+        const userId = parseInt(session.user.id || '0'); // Fallback to 0 if id missing (no orders)
+        if (userId > 0) {
+            orders = await prisma.order.findMany({
+                where: { customerId: userId },
+                include: { history: true },
+            });
+        }
+    } catch (error) {
+        console.error('Error fetching orders:', error); // Log for debug
+        // Don't re-throw; just show empty state
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
             <div className="w-full max-w-2xl bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">Order History for {session.user.username}</h1>
-                <ul className="space-y-4">
-                    {orders.map((order: Order & { history: OrderHistory[] }) => (
-                        <li key={order.id} className="border-2 border-gray-300 p-4 rounded-md">
-                            {order.pickupAddress} to {order.dropoffAddress} - Status: {order.status}
-                        </li>
-                    ))}
-                </ul>
+                <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">
+                    Order History for {session.user.name || session.user.username || 'User'}
+                </h1>
+                {orders.length > 0 ? (
+                    <ul className="space-y-4">
+                        {orders.map((order: Order & { history: OrderHistory[] }) => (
+                            <li key={order.id} className="border-2 border-gray-300 p-4 rounded-md">
+                                {order.pickupAddress} to {order.dropoffAddress} - Status: {order.status}
+                                <ul className="ml-4 mt-2 space-y-1 text-sm text-gray-600">
+                                    {order.history.map((hist) => (
+                                        <li key={hist.id}>{hist.status} at {hist.updatedAt.toLocaleString()}</li>
+                                    ))}
+                                </ul>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-center text-gray-600 italic">This is the history page. No orders yet—schedule one to see history here!</p>
+                )}
             </div>
         </div>
     );

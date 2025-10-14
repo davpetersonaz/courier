@@ -3,13 +3,19 @@
 import { redirect } from 'next/navigation';
 
 export async function logout() {
-    // Make a POST request to the NextAuth.js sign-out endpoint
-    await fetch('/api/auth/signout', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    });
-    // Redirect to the homepage
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';  // Fallback for dev
+    try {
+        await fetch(`${baseUrl}/api/auth/signout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                callbackUrl: '/',  // Redirect here after signout
+            }),
+        });
+    } catch (error) {
+        console.error('Logout failed:', error);  // Log for debug
+    }
     redirect('/');
 }

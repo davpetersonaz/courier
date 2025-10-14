@@ -12,10 +12,13 @@ model Customer {
     username   String   @unique
     email      String   @unique
     password   String
-    firstName  String?
+    firstName  String
     lastName   String?
     address    String
-    phone      String?
+    city       String
+    state      String
+    zip        String
+    phone      String
     createdAt  DateTime @default(now())
     orders     Order[]
 }

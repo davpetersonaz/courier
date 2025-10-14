@@ -4,7 +4,7 @@ import prisma from '@/lib/db';
 import bcrypt from 'bcrypt';
 
 export async function POST(request: Request) {
-    const { username, email, password, firstName, lastName, address, phone } = await request.json();
+    const { username, email, password, firstName, lastName, address, city, state, zip, phone } = await request.json();
     try {
         // Check if username or email already exists
         const existingUser = await prisma.customer.findFirst({
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         });
         if (existingUser) {
             return NextResponse.json(
-                { error: 'Username or email already exists' }, 
+                { error: 'Username or email already exists' },
                 { status: 400 }
             );
         }
@@ -31,6 +31,9 @@ export async function POST(request: Request) {
                 firstName,
                 lastName,
                 address,
+                city,
+                state,
+                zip,
                 phone
             },
         });
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true });
     } catch (err) {
         return NextResponse.json(
-            { error: 'Failed to register user' }, 
+            { error: 'Failed to register user' },
             { status: 500 }
         );
     }

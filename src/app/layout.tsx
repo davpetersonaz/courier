@@ -2,9 +2,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../styles/global.css";
-import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 import SessionProviderWrapper from '../components/SessionProviderWrapper';
-import { logout } from '@/lib/auth-actions';
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 
@@ -29,20 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <html lang="en">
             <body className={`${geistSans.variable} ${geistMono.variable}`}>
                 <SessionProviderWrapper>
-                    <nav className="bg-blue-600 text-white p-4 flex space-x-4">
-                        <Link href="/" className="hover:underline">Home</Link>
-                        {session ? (
-                            <>
-                                <Link href="/schedule" className="hover:underline">Schedule</Link>
-                                <Link href="/history" className="hover:underline">History</Link>
-                                <form action={logout} method="post">
-                                    <button type="submit" className="hover:underline">Logout</button>
-                                </form>
-                            </>
-                        ) : (
-                            <Link href="/register" className="hover:underline">Register</Link>
-                        )}
-                    </nav>
+                    <Navbar session={session} />
                     {children}
                 </SessionProviderWrapper>
             </body>
