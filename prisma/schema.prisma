@@ -24,15 +24,24 @@ model Customer {
 }
 
 model Order {
-    id             Int      @id @default(autoincrement())
-    customerId     Int
-    customer       Customer @relation(fields: [customerId], references: [id])
-    pickupAddress  String
-    dropoffAddress String
-    pickupTime     DateTime
-    status         String
-    createdAt      DateTime @default(now())
-    history        OrderHistory[]
+    id                  Int      @id @default(autoincrement())
+    customerId          Int
+    customer            Customer @relation(fields: [customerId], references: [id])
+    pickupDate          DateTime
+    pickupTime          String   // Time as string (e.g., "14:30") for form compatibility
+    pickupAddress       String
+    pickupContactName   String?
+    pickupContactPhone  String?
+    pickupInstructions  String?
+    totalPieces         Int
+    orderWeight         Float    // Use Float for weight (e.g., 5.5 lbs)
+    dropoffAddress      String
+    dropoffContactName  String?
+    dropoffContactPhone String?
+    dropoffInstructions String?
+    status              String   @default("pending")
+    createdAt           DateTime @default(now())
+    history             OrderHistory[]
 }
 
 model OrderHistory {
