@@ -1,20 +1,34 @@
-/* src/types/next-auth.d.ts */
-import { DefaultSession } from 'next-auth';
+// src/types/next-auth.d.ts
+import "next-auth"
 
-declare module 'next-auth' {
+declare module "next-auth" {
     interface Session {
         user: {
-            id: string;
-            username: string;
-            email: string;
-            name?: string | null;
-        } & DefaultSession['user'];
+            id: string
+            username: string
+            name?: string | null
+            email?: string | null
+            image?: string | null
+        }
     }
 
     interface User {
-        id: string;
-        username: string;
-        email: string;
-        name?: string | null;
+        id: string
+        username: string
+        name?: string | null
+        email?: string | null
+        image?: string | null
+    }
+}
+
+declare module "next-auth/client" {
+    interface Session {
+        user: {
+            id: string
+            username: string
+            name?: string | null
+            email?: string | null
+            image?: string | null
+        }
     }
 }
