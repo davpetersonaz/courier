@@ -2,18 +2,17 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { logout } from '@/lib/auth-actions';
-import { Session } from 'next-auth';
+import { signOut, useSession } from 'next-auth/react';
 import LoginModal from './LoginModal';
 
-interface NavbarProps {
-    session: Session | null;
-}
-
-export default function Navbar({ session }: NavbarProps) {
+export default function Navbar() {
+    const { data: session } = useSession(); // Get session client-side
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const openLogin = () => setIsLoginOpen(true);
     const closeLogin = () => setIsLoginOpen(false);
+    const handleLogout = async () => {
+        await signOut({ callbackUrl: '/' }); // This clears session and redirects
+    };
     return (
         <nav className="bg-blue-600 text-white p-4 flex justify-between items-center">
             <div className="flex space-x-4">
@@ -33,9 +32,9 @@ export default function Navbar({ session }: NavbarProps) {
                         <button onClick={openLogin} className="hover:underline">Login</button>
                     </>
                 ) : (
-                    <form action={logout} className="inline">
-                        <button type="submit" className="hover:underline">Logout</button>
-                    </form>
+                    <button onClick={handleLogout} className="hover:underline">
+                        Logout
+                    </button>
                 )}
             </div>
             <LoginModal isOpen={isLoginOpen} onClose={closeLogin} />

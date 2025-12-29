@@ -63,7 +63,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                                 value={username}
                                 onChange={e => setUsername(e.target.value)}
                                 placeholder="Username"
-                                className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                className="text-gray-900 mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                                 disabled={isSubmitting}
                             />
@@ -78,7 +78,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 placeholder="Password"
-                                className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                className="text-gray-900 mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                                 disabled={isSubmitting}
                             />
