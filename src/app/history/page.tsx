@@ -1,9 +1,8 @@
 // src/app/history/page.tsx
 import prisma from '@/lib/db';
-import { auth, authOptions } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { Order, OrderHistory } from '@prisma/client';
 import { redirect } from 'next/navigation';
-import type { Session } from "next-auth";
 
 type ExtendedOrder = Order & {
     history: OrderHistory[];
