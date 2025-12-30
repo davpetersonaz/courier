@@ -7,6 +7,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+
+enum UserRole {
+    CUSTOMER
+    COURIER
+}
+
 model Customer {
     id         Int      @id @default(autoincrement())
     username   String   @unique
@@ -19,6 +25,7 @@ model Customer {
     state      String
     zip        String
     phone      String
+    role       UserRole @default(CUSTOMER)
     createdAt  DateTime @default(now())
     orders     Order[]
 }
@@ -39,7 +46,7 @@ model Order {
     dropoffContactName  String?
     dropoffContactPhone String?
     dropoffInstructions String?
-    status              String   @default("pending")
+    status              String   @default("pending") // values: pending, en_route_pickup, picked_up, delivered
     createdAt           DateTime @default(now())
     history             OrderHistory[]
 }

@@ -3,8 +3,10 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import prisma from "@/lib/db"
 import bcrypt from "bcrypt"
+import type { Session, User } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const authOptions  = {
     providers: [
         Credentials({
             name: "Credentials",
@@ -12,7 +14,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 username: { label: "Username", type: "text" },
                 password: { label: "Password", type: "password" },
             },
-            async authorize(credentials) {
+            async authorize(credentials, ) {//'request', the 2nd param, is unused, so omitted here.
                 if (!credentials?.username || !credentials?.password){ return null }
 
                 const user = await prisma.customer.findUnique({
@@ -23,6 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         email: true,
                         username: true,
                         password: true,
+                        role: true
                     },
                 })
 
@@ -34,24 +37,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     name: user.firstName,
                     email: user.email,
                     username: user.username,
+                    role: user.role
                 }
             },
         }),
     ],
     pages: { signIn: "/" },
-    session: { strategy: "jwt" },
+    session: { strategy: "jwt" as const },
     callbacks: {
-        jwt({ token, user }) {
+        jwt({ token, user }: { token: JWT; user?: User | null }) {
             if (user) {
                 token.id = user.id;
                 token.username = user.username;
+                token.role = user.role;
             }
             return token;
         },
-        session({ session, token }) {
-            if (token.id){ session.user.id = token.id as string }
-            if (token.username){ session.user.username = token.username as string }
+        session({ session, token }: { session: Session; token: JWT }) {
+            if (token.id){ session.user.id = token.id; }
+            if (token.username){ session.user.username = token.username; }
+            if (token.role){ session.user.role = token.role; }
             return session;
         },
     },
-})
+};
+
+const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+export { handlers, auth, signIn, signOut, authOptions };
