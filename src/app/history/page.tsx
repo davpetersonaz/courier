@@ -1,17 +1,12 @@
 // src/app/history/page.tsx
 import prisma from '@/lib/db';
 import { auth } from '@/lib/auth';
-import { Order, OrderHistory } from '@prisma/client';
+import { OrderStatus } from '@/lib/order-status';
 import { redirect } from 'next/navigation';
-
-type ExtendedOrder = Order & {
-    history: OrderHistory[];
-}
+import { ExtendedOrder } from '@/types/order';
 
 export default async function History() {
     const session = await auth();
-    console.log('Session:', session); // ← Add this
-    console.log('User role:', session?.user?.role); // ← Add this
     if(!session){ redirect('/'); }
 
     //session exists, but user or role is missing → treat as regular customer
@@ -23,12 +18,24 @@ export default async function History() {
     // Customers see only their own orders
     const orders: ExtendedOrder[] = await prisma.order.findMany({
         where: { customerId: parseInt(session.user.id) },
-        include: { history: true },
-        orderBy: { createdAt: 'desc' },
+        include: {
+            customer: { // ← Add this block
+                select: { firstName: true, lastName: true, phone: true },
+            },
+            courier: {
+                select: { firstName: true, lastName: true },
+            },
+            history: {
+                orderBy: { updatedAt: 'asc' }, // Chronological order
+                include: {
+                    changedBy: {
+                        select: { firstName: true, lastName: true }
+                    }
+                }
+            }
+        },
+        orderBy: { createdAt: 'desc' }
     });
-
-    const pendingOrders = orders.filter(o => o.status === 'pending');
-    const completedOrders = orders.filter(o => o.status === 'delivered'); // or 'completed'
 
     return (
         <div className="min-h-screen p-4 bg-gray-100">
@@ -36,60 +43,66 @@ export default async function History() {
                 <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">
                     Order History - {session.user.username}
                 </h1>
-                <div className="bg-white rounded-lg shadow-md">
-                    {/* Tabs */}
-                    <div className="flex border-b border-gray-200">
-                        <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Pending Orders ({pendingOrders.length})
-                        </div>
-                        <div className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Completed Orders ({completedOrders.length})
-                        </div>
+                {orders.length === 0 ? (
+                    <p className="p-8 text-center text-gray-500 bg-white rounded-lg shadow">No orders yet.</p>
+                ) : (
+                    <div className="space-y-8">
+                        {orders.map((order) => (
+                            <div key={order.id} className="bg-white rounded-lg shadow-md p-6">
+                                <div className="flex justify-between items-start mb-4">
+                                    <h2 className="text-2xl font-semibold">Order #{order.id}</h2>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                        order.status === OrderStatus.PENDING ? 'bg-yellow-100 text-yellow-800' :
+                                        order.status === OrderStatus.DELIVERED ? 'bg-green-100 text-green-800' :
+                                        'bg-blue-100 text-blue-800'
+                                    }`}>
+                                        {order.status.replace(/_/g, ' ')}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <p className="font-medium">Pickup</p>
+                                        <p>{order.pickupAddress}</p>
+                                        <p className="text-sm text-gray-600">
+                                            {new Date(order.pickupDate).toLocaleDateString()} at {order.pickupTime}
+                                        </p>
+                                        {order.pickupContactName && <p>Contact: {order.pickupContactName} ({order.pickupContactPhone})</p>}
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">Dropoff</p>
+                                        <p>{order.dropoffAddress}</p>
+                                        {order.dropoffContactName && <p>Contact: {order.dropoffContactName} ({order.dropoffContactPhone})</p>}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <p className="font-medium mb-2">Status History</p>
+                                    <div className="space-y-2">
+                                        {order.history.length === 0 ? (
+                                            <p className="text-sm text-gray-500">No status updates yet</p>
+                                        ) : (
+                                            order.history.map((entry) => (
+                                                <div key={entry.id} className="flex items-center space-x-2 text-sm">
+                                                    <span className="text-gray-600">
+                                                        {new Date(entry.updatedAt).toLocaleString()}
+                                                    </span>
+                                                    <span className="font-medium">
+                                                        → {entry.status.replace(/_/g, ' ')}
+                                                    </span>
+                                                    {entry.changedBy && (
+                                                        <span className="text-xs text-blue-600">
+                                                            by {entry.changedBy.firstName} {entry.changedBy.lastName}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    {/* Table */}
-                    {orders.length === 0 ? (
-                        <p className="p-8 text-center text-gray-500">No orders yet.</p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pickup Date</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pickup Address</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dropoff Address</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {orders.map((order) => (
-                                        <tr key={order.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{order.id}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {new Date(order.pickupDate).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                    order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                                                    'bg-blue-100 text-blue-800'
-                                                }`}>
-                                                    {order.status.toUpperCase()}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-900">{order.pickupAddress}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-900">{order.dropoffAddress}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {new Date(order.createdAt).toLocaleString()}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
         </div>
     );

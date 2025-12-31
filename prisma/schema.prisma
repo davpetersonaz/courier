@@ -7,10 +7,16 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 enum UserRole {
     CUSTOMER
     COURIER
+}
+
+enum OrderStatus {
+    PENDING
+    EN_ROUTE_PICKUP
+    PICKED_UP
+    DELIVERED
 }
 
 model Customer {
@@ -28,12 +34,16 @@ model Customer {
     role       UserRole @default(CUSTOMER)
     createdAt  DateTime @default(now())
     orders     Order[]
+    courierOrders   Order[] @relation("CourierOrders")
+    orderHistoryChangedBy OrderHistory[] @relation("OrderHistoryChangedBy")
 }
 
 model Order {
     id                  Int      @id @default(autoincrement())
     customerId          Int
     customer            Customer @relation(fields: [customerId], references: [id])
+    courierId           Int?
+    courier             Customer? @relation("CourierOrders", fields: [courierId], references: [id])
     pickupDate          DateTime
     pickupTime          String   // Time as string (e.g., "14:30") for form compatibility
     pickupAddress       String
@@ -46,8 +56,9 @@ model Order {
     dropoffContactName  String?
     dropoffContactPhone String?
     dropoffInstructions String?
-    status              String   @default("pending") // values: pending, en_route_pickup, picked_up, delivered
+    status              OrderStatus   @default(PENDING) // values: pending, en_route_pickup, picked_up, delivered
     createdAt           DateTime @default(now())
+    updatedAt           DateTime @updatedAt
     history             OrderHistory[]
 }
 
@@ -56,6 +67,8 @@ model OrderHistory {
     orderId    Int
     order      Order    @relation(fields: [orderId], references: [id])
     customerId Int
-    status     String
+    status     OrderStatus
+    changedById Int?     // nullable if system-generated
+    changedBy   Customer? @relation("OrderHistoryChangedBy", fields: [changedById], references: [id])
     updatedAt  DateTime @default(now())
 }
