@@ -8,22 +8,53 @@ import { ExtendedOrder } from '@/types/order';
 
 async function updateOrderStatus(orderId: number, newStatus: OrderStatus, courierId: number) {
     'use server';
-    await prisma.order.update({
-        where: { id: orderId },
-        data: {
-            status: newStatus,
-            courierId: newStatus !== OrderStatus.PENDING ? courierId : null
+    try {
+        if (newStatus === OrderStatus.EN_ROUTE_PICKUP) {
+            // Atomic claim: only if still PENDING and unassigned
+            const updated = await prisma.order.updateMany({
+                where: {
+                    id: orderId,
+                    status: OrderStatus.PENDING,
+                    courierId: null
+                },
+                data: {
+                    status: OrderStatus.EN_ROUTE_PICKUP,
+                    courierId: courierId
+                },
+            });
+
+            if (updated.count === 0) {
+                throw new Error('Order was already claimed by another courier');
+            }
+        } else {
+            // For PICKED_UP or DELIVERED: must be owned by this courier
+            await prisma.order.update({
+                where: {
+                    id: orderId,
+                    courierId: courierId  // Security check
+                },
+                data: {
+                    status: newStatus
+                    // courierId stays the same
+                },
+            });
         }
-    });
-    await prisma.orderHistory.create({
-        data: {
-            orderId,
-            customerId: courierId, // or session.user.id later
-            status: newStatus,
-            changedById: courierId
-        },
-    });
-    revalidatePath('/courier/dashboard');
+
+        // Log history
+        await prisma.orderHistory.create({
+            data: {
+                orderId,
+                customerId: courierId, // note: field name is misleading, but matches schema
+                status: newStatus,
+                changedById: courierId
+            },
+        });
+
+        revalidatePath('/courier/dashboard');
+    } catch (error) {
+        // Re-throw to let form show error (Next.js server actions propagate errors)
+        throw error;
+    }
 }
 
 export default async function CourierDashboard() {
@@ -42,8 +73,13 @@ export default async function CourierDashboard() {
         );
     }
 
+    const courierId = parseInt(session.user.id as string);
+
     const pendingOrders: ExtendedOrder[] = await prisma.order.findMany({
-        where: { status: OrderStatus.PENDING },
+        where: {
+            status: OrderStatus.PENDING,
+            courierId: null
+        },
         include: {
             customer: {
                 select: { firstName: true, lastName: true, phone: true },
@@ -64,7 +100,10 @@ export default async function CourierDashboard() {
     });
 
     const inProgressOrders: ExtendedOrder[] = await prisma.order.findMany({
-        where: { status: { in: [OrderStatus.EN_ROUTE_PICKUP, OrderStatus.PICKED_UP] } },
+        where: {
+            courierId,
+            status: { in: [OrderStatus.EN_ROUTE_PICKUP, OrderStatus.PICKED_UP] }
+        },
         include: {
             customer: {
                 select: { firstName: true, lastName: true, phone: true },
@@ -86,6 +125,7 @@ export default async function CourierDashboard() {
 
     const deliveredOrders: ExtendedOrder[] = await prisma.order.findMany({
         where: {
+            courierId,
             status: OrderStatus.DELIVERED,
             updatedAt: { // Only today
                 gte: new Date(new Date().setHours(0,0,0,0))
@@ -161,19 +201,11 @@ export default async function CourierDashboard() {
                                     )}
 
                                     {!order.courierId && (
-                                        <form action={updateOrderStatus.bind(null, order.id, OrderStatus.EN_ROUTE_PICKUP, parseInt(session.user.id))} className="mt-4">
+                                        <form action={updateOrderStatus.bind(null, order.id, OrderStatus.EN_ROUTE_PICKUP, courierId)} className="mt-4">
                                             <button type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition">
                                                 Accept Job – Heading to Pickup
                                             </button>
                                         </form>
-                                    )}
-
-                                    {order.courierId && order.courierId !== parseInt(session.user.id as string) && (
-                                        <p className="text-sm text-orange-600 mt-2">Claimed by another courier</p>
-                                    )}
-
-                                    {order.courierId === parseInt(session.user.id as string) && (
-                                        <p className="text-sm text-green-600 mt-2">You claimed this job</p>
                                     )}
                                 </div>
                             ))}
@@ -219,7 +251,7 @@ export default async function CourierDashboard() {
                                     </div>
 
                                     {order.status === OrderStatus.EN_ROUTE_PICKUP && (
-                                        <form action={updateOrderStatus.bind(null, order.id, OrderStatus.PICKED_UP, parseInt(session.user.id))} className="mt-4">
+                                        <form action={updateOrderStatus.bind(null, order.id, OrderStatus.PICKED_UP, courierId)} className="mt-4">
                                             <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
                                                 Mark as Picked Up
                                             </button>
@@ -227,7 +259,7 @@ export default async function CourierDashboard() {
                                     )}
 
                                     {order.status === OrderStatus.PICKED_UP && (
-                                        <form action={updateOrderStatus.bind(null, order.id, OrderStatus.DELIVERED, parseInt(session.user.id))} className="mt-4">
+                                        <form action={updateOrderStatus.bind(null, order.id, OrderStatus.DELIVERED, courierId)} className="mt-4">
                                             <button type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition">
                                                 Mark as Delivered
                                             </button>

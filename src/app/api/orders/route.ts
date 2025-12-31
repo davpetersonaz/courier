@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db';
+import { OrderStatus } from '@/lib/order-status';
 
 export async function POST(request: NextRequest) {
     const session = await auth();
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
         const order = await prisma.order.create({
             data: {
                 customer: {
-                    connect: { id: customerId }, // Explicit relation connect
+                    connect: { id: customerId } // Explicit relation connect
                 },
                 pickupDate: pickupDateTime,
                 pickupTime, // Store as string for display
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
                 dropoffContactName,
                 dropoffContactPhone,
                 dropoffInstructions,
-                status: 'pending',
+                status: OrderStatus.PENDING
             },
         });
 
