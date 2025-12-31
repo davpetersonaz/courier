@@ -11,10 +11,10 @@ export type ExtendedOrder = Order & {
         firstName: string | null;
         lastName: string | null;
     } | null;
-    history: (OrderHistory & {
+    history?: (OrderHistory & {
         changedBy: {
-        firstName: string | null;
-        lastName: string | null;
+            firstName: string | null;
+            lastName: string | null;
         } | null;
     })[];
 };
