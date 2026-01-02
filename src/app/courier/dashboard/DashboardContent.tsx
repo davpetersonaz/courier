@@ -11,10 +11,13 @@ import { HistoryResponse } from '@/types/history';
 const fetcher = (url: string) =>
     fetch(url, {
         credentials: 'include',
-        cache: 'no-store' // Prevent caching issues
-    }).then(res => {
+        cache: 'no-store', // Prevent caching issues
+        next: { revalidate: 0 } // Force no cache
+    }).then(async (res) => {
         if (!res.ok) {
-            throw new Error('Failed to fetch data');
+            const err = await res.json().catch(() => ({}));
+            console.error('Fetch error:', err);
+            throw new Error(err.error || 'Authentication failed');
         }
         return res.json();
     });
@@ -284,8 +287,16 @@ export default function DashboardContent() {
                             Delivery History ({deliveredCount} total)
                         </h2>
 
-                        {historyError && (
-                            <div className="p-8 text-center text-red-600">Failed to load history</div>
+                        { historyError && (
+                        <div className="p-8 text-center">
+                            <p className="text-red-600 mb-4">Failed to load history</p>
+                            <button
+                                onClick={() => mutate()}
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            >
+                                Retry
+                            </button>
+                        </div>
                         )}
                         {historyLoading && (
                             <div className="p-8 text-center text-gray-600">Loading history...</div>
