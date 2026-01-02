@@ -8,7 +8,16 @@ import { OrderStatus } from '@/lib/order-status';
 import { DashboardData } from '@/types/dashboard';
 import { HistoryResponse } from '@/types/history';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = (url: string) =>
+    fetch(url, {
+        credentials: 'include',
+        cache: 'no-store' // Prevent caching issues
+    }).then(res => {
+        if (!res.ok) {
+            throw new Error('Failed to fetch data');
+        }
+        return res.json();
+    });
 
 export default function DashboardContent() {
     const searchParams = useSearchParams();
@@ -46,6 +55,12 @@ export default function DashboardContent() {
         }
         prevPendingCount.current = mainData?.pendingOrders?.length || 0;
     }, [mainData]);
+
+    useEffect(() => {
+        if (tab === 'history') {
+            mutate(); // Force refetch history data when tab becomes active
+        }
+    }, [tab, mutate]);
 
     const updateOrderStatus = async (orderId: number, newStatus: OrderStatus) => {
         const res = await fetch('/api/orders/update', {
