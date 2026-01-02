@@ -1,208 +1,136 @@
 // src/app/courier/dashboard/page.tsx
-import prisma from '@/lib/db';
-import { auth } from '@/lib/auth';
+'use client';
+import useSWR from 'swr';
+import { toast } from 'sonner';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { OrderStatus } from '@/lib/order-status';
-import Link from 'next/link';
-import { revalidatePath } from 'next/cache';
-import { ExtendedOrder } from '@/types/order';
+import { DashboardData } from '@/types/dashboard';
+import { HistoryResponse } from '@/types/history';
 
-async function updateOrderStatus(orderId: number, newStatus: OrderStatus, courierId: number) {
-    'use server';
-    try {
-        if (newStatus === OrderStatus.EN_ROUTE_PICKUP) {
-            // Atomic claim: only if still PENDING and unassigned
-            const updated = await prisma.order.updateMany({
-                where: {
-                    id: orderId,
-                    status: OrderStatus.PENDING,
-                    courierId: null
-                },
-                data: {
-                    status: OrderStatus.EN_ROUTE_PICKUP,
-                    courierId: courierId
-                },
-            });
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-            if (updated.count === 0) {
-                throw new Error('Order was already claimed by another courier');
-            }
-        } else {
-            // For PICKED_UP or DELIVERED: must be owned by this courier
-            await prisma.order.update({
-                where: {
-                    id: orderId,
-                    courierId: courierId  // Security check
-                },
-                data: {
-                    status: newStatus
-                    // courierId stays the same
-                },
+export default function CourierDashboard() {
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
+
+    const tab = searchParams.get('tab') || 'available';
+    const historyPage = parseInt(searchParams.get('page') || '1');
+
+    // Main dashboard data (available + in-progress + count)
+    const { data: mainData, error: mainError, mutate, isLoading: mainLoading } = useSWR<DashboardData>(
+        '/api/courier/dashboard',
+        fetcher,
+        {
+            refreshInterval: tab === 'available' || tab === 'progress' ? 15000 : 0, // Only auto-refresh on active tabs
+            revalidateOnFocus: true
+        }
+    );
+
+    // History data - only fetch when on history tab
+    const { data: historyData, error: historyError, isLoading: historyLoading } = useSWR<HistoryResponse | null>(
+        tab === 'history' ? `/api/courier/history?page=${historyPage}` : null,
+        fetcher
+    );
+
+    const prevPendingCount = useRef<number>(0);
+
+    // Notify when new pending orders appear
+    useEffect(() => {
+        if (mainData && prevPendingCount.current > 0 && mainData.pendingOrders.length > prevPendingCount.current) {
+            const newCount = mainData.pendingOrders.length - prevPendingCount.current;
+            toast.success(`${newCount} new pickup${newCount > 1 ? 's' : ''} available!`, {
+                duration: 6000,
             });
         }
+        prevPendingCount.current = mainData?.pendingOrders?.length || 0;
+    }, [mainData]);
 
-        // Log history
-        await prisma.orderHistory.create({
-            data: {
-                orderId,
-                customerId: courierId, // note: field name is misleading, but matches schema
-                status: newStatus,
-                changedById: courierId
-            },
+    const updateOrderStatus = async (orderId: number, newStatus: OrderStatus) => {
+        const res = await fetch('/api/orders/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, newStatus }),
         });
 
-        revalidatePath('/courier/dashboard');
-    } catch (error) {
-        // Re-throw to let form show error (Next.js server actions propagate errors)
-        throw error;
-    }
-}
+        if (res.ok) {
+            const messages: Record<string, string> = {
+                EN_ROUTE_PICKUP: 'Job accepted! Heading to pickup.',
+                PICKED_UP: 'Marked as Picked Up',
+                DELIVERED: 'Delivery completed! Great job!',
+            };
+            toast.success(messages[newStatus]);
+            mutate(); // Refresh data immediately
+        } else {
+            const err = await res.json();
+            toast.error(err.error.includes('claimed') ? 'Job already claimed by another courier' : err.error || 'Action failed');
+            mutate(); // Still refresh to show updated state
+        }
+    };
 
-export default async function CourierDashboard({ searchParams }: { searchParams: Promise<{ page?: string; tab?: string }> }) {
-    const session = await auth();
+    if (mainError) return <div className="p-8 text-center text-red-600">Failed to load dashboard</div>;
+    if (mainLoading || !mainData) return <div className="p-8 text-center text-gray-600">Loading dashboard...</div>;
 
-    if (!session || session.user.role !== 'COURIER') {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <div className="bg-white p-8 rounded-lg shadow-md text-center">
-                    <p className="text-xl text-red-600">Access denied. Couriers only.</p>
-                    <Link href="/" className="mt-4 inline-block text-blue-600 hover:underline">
-                        Go Home
-                    </Link>
-                </div>
-            </div>
-        );
-    }
+    const { pendingOrders, inProgressOrders, deliveredCount, username } = mainData;
 
-    const courierId = parseInt(session.user.id as string);
+    const setTab = (newTab: string) => {
+        const params = new URLSearchParams(searchParams);
+        params.set('tab', newTab);
+        if (newTab !== 'history'){ params.delete('page'); }
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
-    // pending/unworked orders
-    const pendingOrders: ExtendedOrder[] = await prisma.order.findMany({
-        where: {
-            status: OrderStatus.PENDING,
-            courierId: null
-        },
-        include: {
-            customer: {
-                select: { firstName: true, lastName: true, phone: true },
-            },
-            courier: {
-                select: { firstName: true, lastName: true },
-            },
-            history: {
-                orderBy: { updatedAt: 'asc' },
-                include: {
-                    changedBy: {
-                        select: { firstName: true, lastName: true },
-                    },
-                },
-            },
-        },
-        orderBy: { createdAt: 'asc' },
-    });
-
-    // in-progress orders
-    const inProgressOrders: ExtendedOrder[] = await prisma.order.findMany({
-        where: {
-            courierId,
-            status: { in: [OrderStatus.EN_ROUTE_PICKUP, OrderStatus.PICKED_UP] }
-        },
-        include: {
-            customer: {
-                select: { firstName: true, lastName: true, phone: true },
-            },
-            courier: {
-                select: { firstName: true, lastName: true },
-            },
-            history: {
-                orderBy: { updatedAt: 'asc' },
-                include: {
-                    changedBy: {
-                        select: { firstName: true, lastName: true },
-                    },
-                },
-            },
-        },
-        orderBy: { pickupDate: 'asc' },
-    });
-
-    // delivered orders
-    const resolvedSearchParams = await searchParams;
-    const currentPage = parseInt(resolvedSearchParams.page || '1');
-    const tabFromUrl = resolvedSearchParams.tab;
-    const activeTab =
-        tabFromUrl === 'progress' ? 'progress' :
-            tabFromUrl === 'history' ? 'history' :
-                'available'; // default to available
-    const pageSize = 25;
-    const skip = (currentPage - 1) * pageSize;
-    const deliveredOrders: ExtendedOrder[] = await prisma.order.findMany({
-        where: {
-            courierId,
-            status: OrderStatus.DELIVERED,
-        },
-        include: {
-            customer: {
-                select: { firstName: true, lastName: true, phone: true },
-            },
-            courier: {
-                select: { firstName: true, lastName: true },
-            },
-        },
-        orderBy: { updatedAt: 'desc' },
-        take: pageSize,
-        skip: skip,
-    });
-    const totalDelivered = await prisma.order.count({
-        where: {
-            courierId,
-            status: OrderStatus.DELIVERED,
-        },
-    });
-    const totalPages = Math.ceil(totalDelivered / pageSize);
+    const setHistoryPage = (page: number) => {
+        const params = new URLSearchParams(searchParams);
+        params.set('tab', 'history');
+        params.set('page', page.toString());
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-8">
-                    Courier Dashboard — Welcome, {session.user.username}
+                    Courier Dashboard — Welcome, {username}
                 </h1>
 
-                {/* Tabs with URL-driven state */}
+                {/* Tabs */}
                 <div className="flex border-b border-gray-300 mb-6 overflow-x-auto">
-                    <Link
-                        href="/courier/dashboard?tab=available"
+                    <button
+                        onClick={() => setTab('available')}
                         className={`px-4 py-3 font-medium text-sm md:text-base whitespace-nowrap border-b-2 transition ${
-                            activeTab === 'available'
+                            tab === 'available'
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-800'
                         }`}
                     >
                         Available Pickups ({pendingOrders.length})
-                    </Link>
-                    <Link
-                        href="/courier/dashboard?tab=progress"
+                    </button>
+                    <button
+                        onClick={() => setTab('progress')}
                         className={`px-4 py-3 font-medium text-sm md:text-base whitespace-nowrap border-b-2 transition ml-4 ${
-                            activeTab === 'progress'
+                            tab === 'progress'
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-800'
                         }`}
                     >
                         In Progress ({inProgressOrders.length})
-                    </Link>
-                    <Link
-                        href="/courier/dashboard?tab=history"
+                    </button>
+                    <button
+                        onClick={() => setTab('history')}
                         className={`px-4 py-3 font-medium text-sm md:text-base whitespace-nowrap border-b-2 transition ml-4 ${
-                            activeTab === 'history'
+                            tab === 'history'
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-800'
                         }`}
                     >
-                        Delivery History ({totalDelivered})
-                    </Link>
+                        Delivery History ({deliveredCount})
+                    </button>
                 </div>
 
-                {/* Single Conditional Rendering for Tabs */}
-                {activeTab === 'available' && (
+                {/* Available Pickups */}
+                {tab === 'available' && (
                     <section className="bg-white rounded-lg shadow overflow-hidden">
                         {pendingOrders.length === 0 ? (
                             <div className="p-8 text-center text-gray-600">
@@ -246,14 +174,12 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                                     {order.totalPieces} pcs • {order.orderWeight} lbs
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
-                                                    <form action={updateOrderStatus.bind(null, order.id, OrderStatus.EN_ROUTE_PICKUP, courierId)}>
-                                                        <button
-                                                            type="submit"
-                                                            className="px-4 py-2 bg-green-600 text-white text-xs md:text-sm rounded hover:bg-green-700 transition font-medium"
-                                                        >
-                                                            Accept Job
-                                                        </button>
-                                                    </form>
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, OrderStatus.EN_ROUTE_PICKUP)}
+                                                        className="px-4 py-2 bg-green-600 text-white text-xs md:text-sm rounded hover:bg-green-700 transition font-medium"
+                                                    >
+                                                        Accept Job
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -264,7 +190,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                     </section>
                 )}
 
-                {activeTab === 'progress' && (
+                {tab === 'progress' && (
                     <>
                         {inProgressOrders.length === 0 ? (
                             <div className="bg-white rounded-lg shadow overflow-hidden p-8 text-center text-gray-600">
@@ -296,7 +222,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                                                 ? 'bg-yellow-100 text-yellow-800'
                                                                 : 'bg-blue-100 text-blue-800'
                                                         }`}>
-                                                            {order.status.replace('_', ' ')}
+                                                            {order.status.replace(/_/g, ' ')}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-4">
@@ -310,18 +236,20 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                                     </td>
                                                     <td className="px-4 py-4">
                                                         {order.status === OrderStatus.EN_ROUTE_PICKUP && (
-                                                            <form action={updateOrderStatus.bind(null, order.id, OrderStatus.PICKED_UP, courierId)}>
-                                                                <button className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
-                                                                    Mark Picked Up
-                                                                </button>
-                                                            </form>
+                                                            <button
+                                                                onClick = {() => updateOrderStatus(order.id, OrderStatus.PICKED_UP)}
+                                                                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                                            >
+                                                                Mark Picked Up
+                                                            </button>
                                                         )}
                                                         {order.status === OrderStatus.PICKED_UP && (
-                                                            <form action={updateOrderStatus.bind(null, order.id, OrderStatus.DELIVERED, courierId)}>
-                                                                <button className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700">
-                                                                    Mark Delivered
-                                                                </button>
-                                                            </form>
+                                                            <button
+                                                                onClick = {() => updateOrderStatus(order.id, OrderStatus.DELIVERED)}
+                                                                className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                                                            >
+                                                                Mark Delivered
+                                                            </button>
                                                         )}
                                                     </td>
                                                 </tr>
@@ -334,17 +262,26 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                     </>
                 )}
 
-                {activeTab === 'history' && (
+                {/* Full Paginated Delivery History */}
+                {tab === 'history' && (
                     <section className="bg-white rounded-lg shadow overflow-hidden">
                         <h2 className="px-6 py-4 text-xl font-semibold bg-gray-50 border-b">
-                            Delivery History ({totalDelivered} total)
+                            Delivery History ({deliveredCount} total)
                         </h2>
 
-                        {deliveredOrders.length === 0 ? (
+                        {historyError && (
+                            <div className="p-8 text-center text-red-600">Failed to load history</div>
+                        )}
+                        {historyLoading && (
+                            <div className="p-8 text-center text-gray-600">Loading history...</div>
+                        )}
+                        {!historyLoading && !historyError && historyData?.orders.length === 0 && (
                             <div className="p-8 text-center text-gray-600">
                                 No deliveries completed yet. Your first one is coming soon!
                             </div>
-                        ) : (
+                        )}
+
+                        {historyData && historyData.orders.length > 0 && (
                             <>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
@@ -358,7 +295,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200">
-                                            {deliveredOrders.map((order) => (
+                                            {historyData.orders.map((order) => (
                                                 <tr key={order.id} className="hover:bg-gray-50">
                                                     <td className="px-4 py-4 font-medium">#{order.id}</td>
                                                     <td className="px-4 py-4">
@@ -384,31 +321,29 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                 </div>
 
                                 {/* Pagination */}
-                                {totalPages > 1 && (
-                                    <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t">
-                                        <p className="text-sm text-gray-700">
-                                            Page {currentPage} of {totalPages} ({totalDelivered} total)
-                                        </p>
-                                        <div className="flex gap-2">
-                                            {currentPage > 1 && (
-                                                <Link
-                                                    href={`/courier/dashboard?tab=history&page=${currentPage - 1}`}
-                                                    className="px-4 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                                >
-                                                    Previous
-                                                </Link>
-                                            )}
-                                            {currentPage < totalPages && (
-                                                <Link
-                                                    href={`/courier/dashboard?tab=history&page=${currentPage + 1}`}
-                                                    className="px-4 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                                >
-                                                    Next
-                                                </Link>
-                                            )}
-                                        </div>
+                                <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t">
+                                    <p className="text-sm text-gray-700">
+                                        Page {historyData.page} of {historyData.totalPages} ({historyData.total} total)
+                                    </p>
+                                    <div className="flex gap-2">
+                                        {historyData.hasPrev && (
+                                            <button
+                                                onClick={() => setHistoryPage(historyData.page - 1)}
+                                                className="px-4 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                            >
+                                                Previous
+                                            </button>
+                                        )}
+                                        {historyData.hasNext && (
+                                            <button
+                                                onClick={() => setHistoryPage(historyData.page + 1)}
+                                                className="px-4 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                            >
+                                                Next
+                                            </button>
+                                        )}
                                     </div>
-                                )}
+                                </div>
                             </>
                         )}
                     </section>

@@ -78,10 +78,10 @@ export default async function History() {
                                 <div>
                                     <p className="font-medium mb-2">Status History</p>
                                     <div className="space-y-2">
-                                        {order.history.length === 0 ? (
+                                        {order.history?.length === 0 ? (
                                             <p className="text-sm text-gray-500">No status updates yet</p>
                                         ) : (
-                                            order.history.map((entry) => (
+                                            order.history!.map((entry) => (
                                                 <div key={entry.id} className="flex items-center space-x-2 text-sm">
                                                     <span className="text-gray-600">
                                                         {new Date(entry.updatedAt).toLocaleString()}

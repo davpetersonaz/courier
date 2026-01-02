@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "../styles/global.css";
 import Navbar from '@/components/Navbar';
 import SessionProviderWrapper from '../components/SessionProviderWrapper';
-import { auth } from '@/lib/auth' ;
+import { Toaster } from 'sonner';
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -22,13 +22,21 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode; }) {
-    const session = await auth();
     return (
         <html lang="en">
             <body className={`${geistSans.variable} ${geistMono.variable}`}>
                 <SessionProviderWrapper>
-                    <Navbar session={session} />
+                    <Navbar />
                     {children}
+                    <Toaster 
+                        position="bottom-right"
+                        richColors
+                        closeButton
+                        duration={5000}
+                        toastOptions={{
+                            style: { fontSize: '0.95rem' },
+                        }}
+                    />
                 </SessionProviderWrapper>
             </body>
         </html>
