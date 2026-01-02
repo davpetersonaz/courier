@@ -40,6 +40,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true });
     } catch (err) {
+        console.error('error in api/register/route', err);
         return NextResponse.json(
             { error: 'Failed to register user' },
             { status: 500 }
