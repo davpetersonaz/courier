@@ -39,13 +39,14 @@ async function updateOrderStatus(orderId: number, newStatus: OrderStatus) {
     revalidatePath('/courier/dashboard');
 }
 
-export default async function CourierDashboard({ searchParams }: { searchParams: { tab?: string; page?: string } }) {
+export default async function CourierDashboard({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string }> }) {
     const session = await auth();
     if (!session || session.user.role !== 'COURIER') redirect('/');
 
+    const resolvedParams = await searchParams;
+    const tab = resolvedParams.tab || 'available';
+    const page = parseInt(resolvedParams.page || '1');
     const courierId = parseInt(session.user.id as string);
-    const tab = searchParams.tab || 'available';
-    const page = parseInt(searchParams.page || '1');
 
     // Fetch main data
     const [pendingOrders, inProgressOrders, deliveredCount] = await Promise.all([
