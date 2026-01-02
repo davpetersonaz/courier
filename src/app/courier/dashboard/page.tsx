@@ -1,5 +1,7 @@
 // src/app/courier/dashboard/page.tsx
 'use client';
+export const dynamic = 'force-dynamic';
+
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
