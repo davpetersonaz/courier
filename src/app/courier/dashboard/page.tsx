@@ -101,7 +101,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
         <div className="min-h-screen bg-gray-100 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-8">
-                    Courier Dashboard — Welcome, {session.user.username}
+                    Courier Dashboard — Welcome, {session.user.name}
                 </h1>
 
                 {/* Tabs - use Link for navigation */}
