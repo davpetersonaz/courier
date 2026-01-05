@@ -28,6 +28,7 @@ export default function MyAccount() {
     const [verifyPassword, setVerifyPassword] = useState('');
     const [passwordUpdating, setPasswordUpdating] = useState(false);
     const [passwordError, setPasswordError] = useState('');
+    const [passwordSuccess, setPasswordSuccess] = useState('');
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -247,6 +248,9 @@ export default function MyAccount() {
                     {passwordError && (
                         <p className="text-red-600 text-sm mb-4">{passwordError}</p>
                     )}
+                    {passwordSuccess && (
+                        <p className="text-green-600 text-sm mb-4 bg-green-50 p-3 rounded">{passwordSuccess}</p>
+                    )}
 
                     <form
                         onSubmit={async (e) => {
@@ -274,10 +278,14 @@ export default function MyAccount() {
                                 });
 
                                 if (res.ok) {
-                                    setShowPasswordDialog(false);
+                                    setPasswordSuccess('Password changed successfully!');
                                     setOldPassword('');
                                     setNewPassword('');
                                     setVerifyPassword('');
+                                    setTimeout(() => {
+                                        setShowPasswordDialog(false);
+                                        setPasswordSuccess('');
+                                    }, 2000);
                                 } else {
                                     const { error } = await res.json();
                                     setPasswordError(error || 'Failed to change password');

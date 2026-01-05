@@ -11,7 +11,6 @@ export async function POST(request: Request) {
     }
 
     const { oldPassword, newPassword } = await request.json();
-
     if (!oldPassword || !newPassword) {
         return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
@@ -21,7 +20,6 @@ export async function POST(request: Request) {
             where: { email: session.user.email },
             select: { password: true },
         });
-
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
@@ -32,7 +30,6 @@ export async function POST(request: Request) {
         }
 
         const hashedNew = await bcrypt.hash(newPassword, 10);
-
         await prisma.customer.update({
             where: { email: session.user.email },
             data: { password: hashedNew },
