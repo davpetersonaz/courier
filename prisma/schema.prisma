@@ -19,7 +19,7 @@ enum OrderStatus {
     DELIVERED
 }
 
-model Customer {
+model User {
     id         Int      @id @default(autoincrement())
     username   String   @unique
     email      String   @unique
@@ -32,18 +32,33 @@ model Customer {
     zip        String
     phone      String
     role       UserRole @default(CUSTOMER)
-    createdAt  DateTime @default(now())
     orders     Order[]
     courierOrders   Order[] @relation("CourierOrders")
     orderHistoryChangedBy OrderHistory[] @relation("OrderHistoryChangedBy")
+    savedRecipients Recipient[]
+    createdAt  DateTime @default(now())
+}
+
+model Recipient {
+    id             Int      @id @default(autoincrement())
+    name           String   // e.g., "Mom", "Office", "John Smith"
+    address        String
+    contactName    String?  // Optional: full name if different from 'name'
+    contactPhone   String?
+    instructions   String?
+    userId         Int
+    user           User     @relation(fields: [userId], references: [id])
+    timesUsed      Int      @default(0)
+    createdAt      DateTime @default(now())
+    @@unique([userId, address, name]) // Prevent duplicates per user
 }
 
 model Order {
     id                  Int      @id @default(autoincrement())
     customerId          Int
-    customer            Customer @relation(fields: [customerId], references: [id])
+    customer            User @relation(fields: [customerId], references: [id])
     courierId           Int?
-    courier             Customer? @relation("CourierOrders", fields: [courierId], references: [id])
+    courier             User? @relation("CourierOrders", fields: [courierId], references: [id])
     pickupDate          DateTime
     pickupTime          String   // Time as string (e.g., "14:30") for form compatibility
     pickupAddress       String
@@ -58,7 +73,7 @@ model Order {
     dropoffInstructions String?
     status              OrderStatus   @default(PENDING) // values: pending, en_route_pickup, picked_up, delivered
     createdAt           DateTime @default(now())
-    updatedAt           DateTime @updatedAt
+    updatedAt           DateTime @default(now()) @updatedAt
     history             OrderHistory[]
 }
 
@@ -69,6 +84,6 @@ model OrderHistory {
     customerId Int
     status     OrderStatus
     changedById Int?     // nullable if system-generated
-    changedBy   Customer? @relation("OrderHistoryChangedBy", fields: [changedById], references: [id])
+    changedBy   User? @relation("OrderHistoryChangedBy", fields: [changedById], references: [id])
     updatedAt  DateTime @default(now())
 }
