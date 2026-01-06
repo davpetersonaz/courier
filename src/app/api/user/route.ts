@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     try {
-        const user = await prisma.customer.findUnique({
+        const user = await prisma.user.findUnique({
             where: { email: session.user.email },
             select: {
                 id: true,
@@ -45,7 +45,7 @@ export async function PUT(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const user = await prisma.customer.update({
+        const user = await prisma.user.update({
             where: { email: session.user.email },
             data: {
                 email: body.email,

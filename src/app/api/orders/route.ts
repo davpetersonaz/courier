@@ -11,17 +11,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized - No email in session' }, { status: 401 });
     }
 
-    let customerId: number;
+    let userId: number;
     try {
         // Always query user by email to get ID (consistent with /api/user)
-        const user = await prisma.customer.findUnique({
+        const user = await prisma.user.findUnique({
             where: { email: session.user.email },
             select: { id: true },
         });
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
-        customerId = user.id;
+        userId = user.id;
     } catch (err) {
         console.error('User query error:', err);
         return NextResponse.json({ error: 'Session validation failed' }, { status: 500 });
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
             dropoffContactName,
             dropoffContactPhone,
             dropoffInstructions,
+            saveRecipient = false
         } = body;
 
         // Validate numbers
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
         const order = await prisma.order.create({
             data: {
                 customer: {
-                    connect: { id: customerId } // Explicit relation connect
+                    connect: { id: userId } // Explicit relation connect
                 },
                 pickupDate: pickupDateTime,
                 pickupTime, // Store as string for display
@@ -69,8 +70,8 @@ export async function POST(request: NextRequest) {
                 pickupContactName,
                 pickupContactPhone,
                 pickupInstructions,
-                totalPieces: parseInt(totalPieces),
-                orderWeight: parseFloat(orderWeight),
+                totalPieces: pieces,
+                orderWeight: weight,
                 dropoffAddress,
                 dropoffContactName,
                 dropoffContactPhone,
@@ -78,6 +79,32 @@ export async function POST(request: NextRequest) {
                 status: OrderStatus.PENDING
             },
         });
+
+        if (saveRecipient && dropoffContactName && dropoffAddress) {
+            await prisma.recipient.upsert({
+                where: {
+                    userId_address_name: {
+                        userId, // the logged-in user
+                        address: dropoffAddress,
+                        name: dropoffContactName || 'Unnamed Recipient',
+                    },
+                },
+                update: {
+                    contactPhone: dropoffContactPhone || null,
+                    instructions: dropoffInstructions || null,
+                    timesUsed: { increment: 1 },
+                },
+                create: {
+                    userId,
+                    name: dropoffContactName || 'Unnamed Recipient',
+                    address: dropoffAddress,
+                    contactName: dropoffContactName || null,
+                    contactPhone: dropoffContactPhone || null,
+                    instructions: dropoffInstructions || null,
+                    timesUsed: 1,
+                },
+            });
+        }
 
         return NextResponse.json({ success: true, orderId: order.id });
     } catch (error) {

@@ -37,6 +37,7 @@ export default function Schedule() {
         dropoffInstructions: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [saveRecipient, setSaveRecipient] = useState(false);
 
     if (status === 'loading') {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -64,7 +65,8 @@ export default function Schedule() {
             const res = await fetch('/api/orders', {
                 method: 'POST',
                 body: JSON.stringify({
-                    ...formData
+                    ...formData,
+                    saveRecipient
                 }),
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -315,6 +317,19 @@ export default function Schedule() {
                                 />
                             </div>
                         </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 my-6">
+                        <input
+                            type="checkbox"
+                            id="saveRecipient"
+                            checked={saveRecipient}
+                            onChange={(e) => setSaveRecipient(e.target.checked)}
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="saveRecipient" className="text-sm font-medium text-gray-700">
+                            Save this recipient for future orders
+                        </label>
                     </div>
 
                     {/* Buttons */}

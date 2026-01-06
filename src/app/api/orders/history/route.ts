@@ -10,7 +10,7 @@ export async function GET() {
     }
 
     try {
-        const user = await prisma.customer.findUnique({
+        const user = await prisma.user.findUnique({
             where: { email: session.user.email },
             select: { id: true },
         });

@@ -17,7 +17,7 @@ const authOptions  = {
             async authorize(credentials, ) {//'request', the 2nd param, is unused, so omitted here.
                 if (!credentials?.username || !credentials?.password){ return null }
 
-                const user = await prisma.customer.findUnique({
+                const user = await prisma.user.findUnique({
                     where: { username: credentials.username as string },
                     select: {
                         id: true,
