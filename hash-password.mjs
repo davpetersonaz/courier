@@ -1,8 +1,9 @@
 // hash-password.mjs
 /* this standalone file generates a hashed password */
+//run: node hash-password.mjs
 import bcrypt from 'bcrypt';
 
-const plainPassword = 'ReplaceWithaStrongPassWord'; // Change this to whatever you want the courier's password to be
+const plainPassword = 'ReplaceWithaStrongPassWord'; // (ReplaceWithaStrongPassWord) Change this to whatever you want the courier's password to be
 const saltRounds = 10;
 
 try {
