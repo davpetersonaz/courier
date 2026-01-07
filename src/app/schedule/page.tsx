@@ -1,6 +1,7 @@
 // src/app/schedule/page.tsx
 'use client';
-import { useState } from 'react';
+'use client'
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
@@ -17,6 +18,15 @@ interface OrderFormData {
     dropoffContactName: string;
     dropoffContactPhone: string;
     dropoffInstructions: string;
+}
+
+interface Recipient {
+    id: number;
+    name: string;
+    address: string;
+    contactName: string | null;
+    contactPhone: string | null;
+    instructions: string | null;
 }
 
 export default function Schedule() {
@@ -38,6 +48,16 @@ export default function Schedule() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [saveRecipient, setSaveRecipient] = useState(false);
+    const [recipients, setRecipients] = useState<Recipient[]>([]);
+    const [loadingRecipients, setLoadingRecipients] = useState(true);
+
+    useEffect(() => {
+        if (status === 'authenticated') {
+            fetchRecipients();
+        } else if (status === 'unauthenticated') {
+            router.push('/');
+        }
+    }, [status, router]);
 
     if (status === 'loading') {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -47,6 +67,46 @@ export default function Schedule() {
         router.push('/');
         return null;
     }
+
+    const fetchRecipients = async () => {
+        try {
+            const res = await fetch('/api/recipients');
+            if (res.ok) {
+                const data = await res.json();
+                setRecipients(data.recipients || []);
+            }
+        } catch (err) {
+            console.error('Failed to load recipients:', err);
+        } finally {
+            setLoadingRecipients(false);
+        }
+    };
+
+    const handleRecipientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const recipientId = parseInt(e.target.value);
+        if (recipientId === 0) {
+            // "Select a saved recipient" option
+            setFormData(prev => ({
+                ...prev,
+                dropoffAddress: '',
+                dropoffContactName: '',
+                dropoffContactPhone: '',
+                dropoffInstructions: '',
+            }));
+            return;
+        }
+
+        const recipient = recipients.find(r => r.id === recipientId);
+        if (recipient) {
+            setFormData(prev => ({
+                ...prev,
+                dropoffAddress: recipient.address,
+                dropoffContactName: recipient.contactName || recipient.name,
+                dropoffContactPhone: recipient.contactPhone || '',
+                dropoffInstructions: recipient.instructions || '',
+            }));
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -258,6 +318,29 @@ export default function Schedule() {
                     {/* Destination Pane */}
                     <div className="border border-gray-300 p-6 rounded-md">
                         <h2 className="text-2xl font-semibold mb-4">Destination Details</h2>
+
+                        {/* New: Saved Recipients Dropdown */}
+                        <div className="mb-6">
+                            <label htmlFor="savedRecipient" className="block text-sm font-medium text-gray-700 mb-1">
+                                Select Saved Recipient (optional)
+                            </label>
+                            <select
+                                id="savedRecipient"
+                                onChange={handleRecipientSelect}
+                                className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                disabled={loadingRecipients}
+                            >
+                                <option value="0">
+                                    {loadingRecipients ? 'Loading recipients...' : '— Select a saved recipient —'}
+                                </option>
+                                {recipients.map((recipient) => (
+                                    <option key={recipient.id} value={recipient.id}>
+                                        {recipient.name} - {recipient.address}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
                                 <label htmlFor="dropoffAddress" className="block text-sm font-medium text-gray-700 mb-1">
@@ -319,6 +402,7 @@ export default function Schedule() {
                         </div>
                     </div>
 
+                    {/* Save Recipient Checkbox */}
                     <div className="flex items-center space-x-2 my-6">
                         <input
                             type="checkbox"
