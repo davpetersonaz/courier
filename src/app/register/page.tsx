@@ -31,8 +31,11 @@ export default function Register() {
                 headers: { 'Content-Type': 'application/json' },
             });
             if (res.ok) {
-                alert('Registration successful! Redirecting to login...');
-                router.push('/'); // Redirect to login after registration
+                const data = await res.json();
+                if (data.success) {
+                    alert('Registration successful! You can now log in.');
+                    router.push('/'); // or '/login' if you make one
+                }
             } else {
                 let error = 'Registration failed';
                 try {

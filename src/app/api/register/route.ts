@@ -49,7 +49,7 @@ export async function POST(request: Request) {
             },
         });
 
-        return NextResponse.redirect(new URL('/?registered=true', request.url));
+        return NextResponse.json({ success: true });
     } catch (err) {
         console.error('error in api/register/route', err);
         return NextResponse.json(
