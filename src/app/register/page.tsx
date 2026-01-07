@@ -33,6 +33,7 @@ export default function Register() {
             if (res.ok) {
                 const data = await res.json();
                 if (data.success) {
+                    window.scrollTo(0, 0);
                     alert('Registration successful! You can now log in.');
                     router.push('/'); // or '/login' if you make one
                 }
