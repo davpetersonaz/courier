@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../styles/global.css";
 import Navbar from '@/components/Navbar';
-import SessionProviderWrapper from '../components/SessionProviderWrapper';
+import SessionProviderWrapper from '@/components/SessionProviderWrapper';
 import { Toaster } from 'sonner';
+import SessionTimeout from '@/components/SessionTimeout';
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -28,7 +29,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <SessionProviderWrapper>
                     <Navbar />
                     {children}
-                    <Toaster 
+                    <SessionTimeout />
+                    <Toaster
                         position="bottom-right"
                         richColors
                         closeButton

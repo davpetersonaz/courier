@@ -43,7 +43,13 @@ const authOptions  = {
         }),
     ],
     pages: { signIn: "/" },
-    session: { strategy: "jwt" as const },
+    session: { 
+        strategy: "jwt" as const,
+        maxAge: 12 * 60 * 60, // 12 hours in seconds
+    },
+    jwt: {
+        maxAge: 12 * 60 * 60, // must match
+    },
     callbacks: {
         jwt({ token, user }: { token: JWT; user?: User | null }) {
             if (user) {
