@@ -1,6 +1,6 @@
 // src/app/schedule/page.tsx
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { GoogleMap, LoadScript, Marker, DirectionsRenderer } from '@react-google-maps/api';
@@ -63,15 +63,21 @@ export default function Schedule() {
     const [dropoffCoords, setDropoffCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
     const [mapError, setMapError] = useState<string | null>(null);
-    const [pickupMap, setPickupMap] = useState<google.maps.Map | null>(null);
-    const [dropoffMap, setDropoffMap] = useState<google.maps.Map | null>(null);
-    const [routeMap, setRouteMap] = useState<google.maps.Map | null>(null);
     const [pickupVerified, setPickupVerified] = useState<string | null>(null);
     const [dropoffVerified, setDropoffVerified] = useState<string | null>(null);
 
-    const pickupRef = useRef<HTMLDivElement>(null);
-    const dropoffRef = useRef<HTMLDivElement>(null);
-    const routeRef = useRef<HTMLDivElement>(null);
+    // Clear verification badge if user edits after verify
+    useEffect(() => {
+        if (pickupVerified && formData.pickupAddress !== pickupVerified) {
+            setPickupVerified(null);
+        }
+    }, [formData.pickupAddress, pickupVerified]);
+
+    useEffect(() => {
+        if (dropoffVerified && formData.dropoffAddress !== dropoffVerified) {
+            setDropoffVerified(null);
+        }
+    }, [formData.dropoffAddress, dropoffVerified]);
 
     // Fetch recipients
     useEffect(() => {
@@ -82,39 +88,7 @@ export default function Schedule() {
         }
     }, [status, router]);
 
-    // Initialize maps and autocomplete
-    useEffect(() => {
-        if (!window.google || !GOOGLE_MAPS_API_KEY) return;
-
-        // Pickup map
-        if (pickupRef.current && !pickupMap) {
-            const map = new google.maps.Map(pickupRef.current, {
-                center: { lat: 33.4484, lng: -112.0740 },
-                zoom: 12,
-            });
-            setPickupMap(map);
-        }
-
-        // Dropoff map
-        if (dropoffRef.current && !dropoffMap) {
-            const map = new google.maps.Map(dropoffRef.current, {
-                center: { lat: 33.4484, lng: -112.0740 },
-                zoom: 12,
-            });
-            setDropoffMap(map);
-        }
-
-        // Route map
-        if (routeRef.current && !routeMap) {
-            const map = new google.maps.Map(routeRef.current, {
-                center: { lat: 33.4484, lng: -112.0740 },
-                zoom: 10,
-            });
-            setRouteMap(map);
-        }
-    }, [pickupMap, dropoffMap, routeMap]);
-
-    // Route calculation
+    // Route calculation (only when both coords ready)
     useEffect(() => {
         if (pickupCoords && dropoffCoords) {
             const directionsService = new google.maps.DirectionsService();
@@ -125,28 +99,19 @@ export default function Schedule() {
                     travelMode: google.maps.TravelMode.DRIVING,
                 },
                 (result, status) => {
-                    if (status === google.maps.DirectionsStatus.OK) {
+                    if (status === google.maps.DirectionsStatus.OK && result) {
                         setDirections(result);
+                        setMapError(null);
                     } else {
-                        setMapError('Could not calculate route');
+                        setDirections(null);
+                        setMapError('Could not calculate route: ' + status);
                     }
                 }
             );
+        } else {
+            setDirections(null);
         }
     }, [pickupCoords, dropoffCoords]);
-
-    //Make badge disappear if user edits the address after verification
-    useEffect(() => {
-        if (pickupVerified && formData.pickupAddress !== pickupVerified) {
-            setPickupVerified(null); // or set to some "pending" value if you want
-        }
-    }, [formData.pickupAddress, pickupVerified]);
-
-    useEffect(() => {
-        if (dropoffVerified && formData.dropoffAddress !== dropoffVerified) {
-            setDropoffVerified(null);
-        }
-    }, [formData.dropoffAddress, dropoffVerified]);
 
     if (status === 'loading') {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -216,7 +181,7 @@ export default function Schedule() {
             const geocoder = new google.maps.Geocoder();
             const response = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
                 geocoder.geocode({ address }, (results, status) => {
-                    if (status === google.maps.GeocoderStatus.OK && results) resolve(results);
+                    if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) resolve(results);
                     else reject(status);
                 });
             });
@@ -229,7 +194,8 @@ export default function Schedule() {
 
             if (formatted !== address) {
                 if (confirm(`Did you mean: ${formatted}?`)) {
-                    setFormData(prev => ({ ...prev, [address.includes('pickup') ? 'pickupAddress' : 'dropoffAddress']: formatted }));
+                    const field = address.includes('pickup') ? 'pickupAddress' : 'dropoffAddress';
+                    setFormData(prev => ({ ...prev, [field]: formatted }));
                 }
             }
         } catch (err) {
@@ -248,46 +214,25 @@ export default function Schedule() {
             alert('Please fill in pickup time, total pieces, and order weight.');
             return;
         }
+        // require both addresses verified/geocoded
+        if (!pickupCoords || !dropoffCoords) {
+            alert('Please verify both addresses before submitting.');
+            return;
+        }
 
         setIsSubmitting(true);
         try {
             const res = await fetch('/api/orders', {
                 method: 'POST',
-                body: JSON.stringify({
-                    ...formData,
-                    saveRecipient
-                }),
+                body: JSON.stringify({ ...formData, saveRecipient }),
                 headers: { 'Content-Type': 'application/json' },
             });
-            let error = 'Unknown error';
             if (res.ok) {
                 alert('Order scheduled successfully!');
-                // Reset form or redirect
-                setFormData({
-                    pickupDate: new Date().toISOString().split('T')[0],
-                    pickupTime: new Date().toTimeString().slice(0, 5),
-                    pickupAddress: '',
-                    pickupContactName: '',
-                    pickupContactPhone: '',
-                    pickupInstructions: '',
-                    totalPieces: '',
-                    orderWeight: '',
-                    dropoffAddress: '',
-                    dropoffContactName: '',
-                    dropoffContactPhone: '',
-                    dropoffInstructions: '',
-                });
                 router.push('/history');
             } else {
-                // Handle non-JSON or empty body gracefully
-                try {
-                    const data = await res.json();
-                    error = data.error || error;
-                } catch (parseErr) {
-                    console.error('Failed to parse error response:', parseErr);
-                    error = 'Server error (no details available)';
-                }
-                alert('Failed to schedule order: ' + error);
+                const data = await res.json().catch(() => ({}));
+                alert('Failed: ' + (data.error || 'Unknown error'));
             }
         } catch (err) {
             alert('Network Error: ' + String(err));
@@ -311,6 +256,12 @@ export default function Schedule() {
             dropoffContactPhone: '',
             dropoffInstructions: '',
         });
+        setPickupCoords(null);
+        setDropoffCoords(null);
+        setDirections(null);
+        setPickupVerified(null);
+        setDropoffVerified(null);
+        setMapError(null);
     };
 
     return (
@@ -459,30 +410,13 @@ export default function Schedule() {
                                 Verify Pickup Address
                             </button>
                         </div>
-                        {pickupCoords && (
-                            <div className="mt-4 border border-gray-300 rounded-md overflow-hidden">
-                                <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
-                                    <GoogleMap
-                                        mapContainerStyle={mapContainerStyle}
-                                        center={pickupCoords}
-                                        zoom={15}
-                                    >
-                                        <Marker position={pickupCoords} label="Pickup" />
-                                    </GoogleMap>
-                                </LoadScript>
-                            </div>
-                        )}
                         {pickupVerified && (
                             <div className="mt-2 text-sm">
-                                <span className="font-medium text-green-700">Verified as:</span>{' '}
-                                {pickupVerified}
+                                <span className="font-medium text-green-700">Verified as:</span> {pickupVerified}
                                 {pickupVerified !== formData.pickupAddress && (
                                     <span className="text-yellow-600 ml-2">(Google suggestion applied)</span>
                                 )}
                             </div>
-                        )}
-                        {pickupCoords && !pickupVerified && (
-                            <p className="mt-2 text-sm text-gray-500">Address verified on map ↑</p>
                         )}
                     </div>
 
@@ -587,19 +521,6 @@ export default function Schedule() {
                                 Verify Dropoff Address
                             </button>
                         </div>
-                        {dropoffCoords && (
-                            <div className="mt-4 border border-gray-300 rounded-md overflow-hidden">
-                                <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
-                                    <GoogleMap
-                                        mapContainerStyle={mapContainerStyle}
-                                        center={dropoffCoords}
-                                        zoom={15}
-                                    >
-                                        <Marker position={dropoffCoords} label="Dropoff" />
-                                    </GoogleMap>
-                                </LoadScript>
-                            </div>
-                        )}
                         {dropoffVerified && (
                             <div className="mt-2 text-sm">
                                 <span className="font-medium text-green-700">Verified as:</span>{' '}
@@ -611,24 +532,22 @@ export default function Schedule() {
                         )}
                     </div>
 
-                    {/* Route Preview */}
-                    {pickupCoords && dropoffCoords && (
+                    {/* Single Unified Map Preview - appears when both addresses verified */}
+                    {(pickupCoords || dropoffCoords) && (
                         <div className="border border-gray-300 p-6 rounded-md">
-                            <h2 className="text-2xl font-semibold mb-4">Driving Route Preview</h2>
+                            <h2 className="text-2xl font-semibold mb-4">Location Preview & Route</h2>
                             {mapError && <p className="text-red-600 mb-2">{mapError}</p>}
-                            <div style={{ height: '300px' }}>
-                                <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
-                                    <GoogleMap
-                                        mapContainerStyle={mapContainerStyle}
-                                        center={pickupCoords}
-                                        zoom={10}
-                                    >
-                                        <Marker position={pickupCoords} label="Pickup" />
-                                        <Marker position={dropoffCoords} label="Dropoff" />
-                                        {directions && <DirectionsRenderer directions={directions} />}
-                                    </GoogleMap>
-                                </LoadScript>
-                            </div>
+                            <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
+                                <GoogleMap
+                                    mapContainerStyle={mapContainerStyle}
+                                    center={pickupCoords || dropoffCoords || { lat: 33.4484, lng: -112.0740 }}
+                                    zoom={pickupCoords && dropoffCoords ? 11 : 12}
+                                >
+                                    {pickupCoords && <Marker position={pickupCoords} label="Pickup" />}
+                                    {dropoffCoords && <Marker position={dropoffCoords} label="Dropoff" />}
+                                    {directions && <DirectionsRenderer directions={directions} />}
+                                </GoogleMap>
+                            </LoadScript>
                         </div>
                     )}
 
