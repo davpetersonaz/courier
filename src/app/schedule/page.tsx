@@ -372,7 +372,9 @@ export default function Schedule() {
                                             value={formData.pickupAddress}
                                             onChange={handleChange}
                                             placeholder="Start typing your pickup address..."
-                                            autoComplete="new-address-line1"
+                                            autoComplete="off new-address-line1"  // combined values — browsers respect one or the other
+                                            autoCorrect="off"                     // macOS/iOS
+                                            spellCheck="false"                    // extra layer
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 pickupVerified ? 'border-green-500 bg-green-50' : ''
                                             }`}
@@ -548,7 +550,9 @@ export default function Schedule() {
                                             value={formData.dropoffAddress}
                                             onChange={handleChange}
                                             placeholder="Start typing your dropoff address..."
-                                            autoComplete="new-address-line1"
+                                            autoComplete="off new-address-line1"  // combined values — browsers respect one or the other
+                                            autoCorrect="off"                     // macOS/iOS
+                                            spellCheck="false"                    // extra layer
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 dropoffVerified ? 'border-green-500 bg-green-50' : ''
                                             }`}
