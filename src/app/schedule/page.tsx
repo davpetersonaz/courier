@@ -349,7 +349,7 @@ export default function Schedule() {
                                 <label htmlFor="pickupAddress" className="block text-sm font-medium text-gray-700 mb-1">
                                     Pickup Address
                                 </label>
-                                {/* {isLoaded ? (
+                                {isLoaded ? (
                                     <Autocomplete
                                         onLoad={(autocomplete) => {
                                             pickupAutocompleteRef.current = autocomplete;
@@ -378,7 +378,7 @@ export default function Schedule() {
                                             required
                                         />
                                     </Autocomplete>
-                                ) : ( */}
+                                ) : (
                                     <input
                                         // fallback plain input while loading
                                         id="pickupAddress"
@@ -390,7 +390,7 @@ export default function Schedule() {
                                         className="w-full border-2 border-gray-300 p-2 rounded-md"
                                         disabled
                                     />
-                                {/* )} */}
+                                )}
                                 {pickupVerified && (
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
                                         <span className="text-base leading-none">✓</span>
