@@ -1,10 +1,11 @@
 // src/app/schedule/page.tsx
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import { useLoadScript } from '@react-google-maps/api';
+import { Autocomplete } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
@@ -34,7 +35,7 @@ interface Recipient {
 
 const mapContainerStyle = {
     width: '100%',
-    height: '300px',
+    height: '400px',
 };
 
 export default function Schedule() {
@@ -66,10 +67,12 @@ export default function Schedule() {
     const [mapError, setMapError] = useState<string | null>(null);
     const [pickupVerified, setPickupVerified] = useState<string | null>(null);
     const [dropoffVerified, setDropoffVerified] = useState<string | null>(null);
+    const pickupAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+    const dropoffAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-        // libraries: ['places'], // add later for autocomplete
+        libraries: ['places']
     });
 
     // Clear verification badge if user edits after verify
@@ -171,6 +174,14 @@ export default function Schedule() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        // Clear verification & coords if user edits manually
+        if (name === 'pickupAddress') {
+            setPickupVerified(null);
+            setPickupCoords(null);
+        } else if (name === 'dropoffAddress') {
+            setDropoffVerified(null);
+            setDropoffCoords(null);
+        }
     };
 
     const verifyAddress = async (
@@ -210,6 +221,31 @@ export default function Schedule() {
         }
     };
 
+    const handlePlaceSelect = (
+        fieldName: 'pickupAddress' | 'dropoffAddress',
+        setCoords: React.Dispatch<React.SetStateAction<{ lat: number; lng: number } | null>>,
+        setVerified: React.Dispatch<React.SetStateAction<string | null>>
+    ) => {
+        const autocompleteRef = fieldName === 'pickupAddress'
+            ? pickupAutocompleteRef.current
+            : dropoffAutocompleteRef.current;
+        if (autocompleteRef) {
+            const place = autocompleteRef.getPlace();
+            if (place?.formatted_address && place.geometry?.location) {
+                const formatted = place.formatted_address;
+                const lat = place.geometry.location.lat();
+                const lng = place.geometry.location.lng();
+
+                // Update formData directly with the formatted address
+                setFormData(prev => ({
+                    ...prev,
+                    [fieldName]: formatted,
+                }));
+                setCoords({ lat, lng });
+                setVerified(formatted);
+            }
+        }
+    };
 
     const handleVerifyPickup = () => verifyAddress(formData.pickupAddress, setPickupCoords, setPickupVerified, 'pickupAddress');
     const handleVerifyDropoff = () => verifyAddress(formData.dropoffAddress, setDropoffCoords, setDropoffVerified, 'dropoffAddress');
@@ -313,24 +349,52 @@ export default function Schedule() {
                                 <label htmlFor="pickupAddress" className="block text-sm font-medium text-gray-700 mb-1">
                                     Pickup Address
                                 </label>
-                                <input
-                                    id="pickupAddress"
-                                    name="pickupAddress"
-                                    type="text"
-                                    value={formData.pickupAddress}
-                                    onChange={handleChange}
-                                    placeholder="Full pickup address (street, city, state, zip)"
-                                    className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${pickupVerified ? 'border-green-500 bg-green-50' : ''}`}
-                                    required
-                                />
-                                {pickupVerified && (
-                                    <div className="mt-2 text-sm">
-                                        <span className="font-medium text-green-700">Verified as:</span>{' '}
-                                        {pickupVerified}
-                                        {pickupVerified !== formData.pickupAddress && (
-                                            <span className="text-yellow-600 ml-2">(Google suggestion applied)</span>
+                                {isLoaded ? (
+                                    <Autocomplete
+                                        onLoad={(autocomplete) => {
+                                            pickupAutocompleteRef.current = autocomplete;
+                                        }}
+                                        onPlaceChanged={() => handlePlaceSelect(
+                                            'pickupAddress',
+                                            setPickupCoords,
+                                            setPickupVerified
                                         )}
-                                    </div>
+                                        options={{
+                                            types: ['address'], // restrict to full addresses
+                                            componentRestrictions: { country: 'us' }, // optional: US only
+                                        }}
+                                    >
+                                        <input
+                                            id="pickupAddress"
+                                            name="pickupAddress"
+                                            type="text"
+                                            value={formData.pickupAddress}
+                                            onChange={handleChange}
+                                            placeholder="Start typing your pickup address..."
+                                            className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
+                                                pickupVerified ? 'border-green-500 bg-green-50' : ''
+                                            }`}
+                                            required
+                                        />
+                                    </Autocomplete>
+                                ) : (
+                                    <input
+                                        // fallback plain input while loading
+                                        id="pickupAddress"
+                                        name="pickupAddress"
+                                        type="text"
+                                        value={formData.pickupAddress}
+                                        onChange={handleChange}
+                                        placeholder="Loading autocomplete..."
+                                        className="w-full border-2 border-gray-300 p-2 rounded-md"
+                                        disabled
+                                    />
+                                )}
+                                {pickupVerified && (
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
+                                        <span className="text-base leading-none">✓</span>
+                                        <span>Verified</span>
+                                    </span>
                                 )}
                             </div>
                             <div>
@@ -460,17 +524,47 @@ export default function Schedule() {
                                 <label htmlFor="dropoffAddress" className="block text-sm font-medium text-gray-700 mb-1">
                                     Dropoff Address
                                 </label>
-                                <input
-                                    id="dropoffAddress"
-                                    name="dropoffAddress"
-                                    type="text"
-                                    value={formData.dropoffAddress}
-                                    onChange={handleChange}
-                                    placeholder="Full dropoff address"
-                                    className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${dropoffVerified ? 'border-green-500 bg-green-50' : ''}`}
-                                    required
-                                />
-                                {dropoffVerified !== null && dropoffVerified && (
+                                {isLoaded ? (
+                                    <Autocomplete
+                                        onLoad={(autocomplete) => {
+                                            dropoffAutocompleteRef.current = autocomplete;
+                                        }}
+                                        onPlaceChanged={() => handlePlaceSelect(
+                                            'dropoffAddress',
+                                            setDropoffCoords,
+                                            setDropoffVerified
+                                        )}
+                                        options={{
+                                            types: ['address'],
+                                            componentRestrictions: { country: 'us' },
+                                        }}
+                                    >
+                                        <input
+                                            id="dropoffAddress"
+                                            name="dropoffAddress"
+                                            type="text"
+                                            value={formData.dropoffAddress}
+                                            onChange={handleChange}
+                                            placeholder="Start typing your dropoff address..."
+                                            className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
+                                                dropoffVerified ? 'border-green-500 bg-green-50' : ''
+                                            }`}
+                                            required
+                                        />
+                                    </Autocomplete>
+                                ) : (
+                                    <input
+                                        id="dropoffAddress"
+                                        name="dropoffAddress"
+                                        type="text"
+                                        value={formData.dropoffAddress}
+                                        onChange={handleChange}
+                                        placeholder="Loading autocomplete..."
+                                        className="w-full border-2 border-gray-300 p-2 rounded-md"
+                                        disabled
+                                    />
+                                )}
+                                {dropoffVerified && (
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
                                         <span className="text-base leading-none">✓</span>
                                         <span>Verified</span>
@@ -587,8 +681,10 @@ export default function Schedule() {
                         </button>
                         <button
                             type="submit"
-                            disabled={isSubmitting}
-                            className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50"
+                            disabled={isSubmitting || !pickupCoords || !dropoffCoords}
+                            className={`bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 ${
+                                !pickupCoords || !dropoffCoords ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                         >
                             {isSubmitting ? 'Scheduling...' : 'Schedule Order'}
                         </button>
