@@ -135,6 +135,19 @@ export default function Schedule() {
         }
     }, [pickupCoords, dropoffCoords]);
 
+    //Make badge disappear if user edits the address after verification
+    useEffect(() => {
+        if (pickupVerified && formData.pickupAddress !== pickupVerified) {
+            setPickupVerified(null); // or set to some "pending" value if you want
+        }
+    }, [formData.pickupAddress, pickupVerified]);
+
+    useEffect(() => {
+        if (dropoffVerified && formData.dropoffAddress !== dropoffVerified) {
+            setDropoffVerified(null);
+        }
+    }, [formData.dropoffAddress, dropoffVerified]);
+
     if (status === 'loading') {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
     }
@@ -310,7 +323,131 @@ export default function Schedule() {
                     <div className="border border-gray-300 p-6 rounded-md">
                         <h2 className="text-2xl font-semibold mb-4">Pickup Details</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* ... your pickup inputs ... */}
+                            <div>
+                                <label htmlFor="pickupDate" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Pickup Date
+                                </label>
+                                <input
+                                    id="pickupDate"
+                                    name="pickupDate"
+                                    type="date"
+                                    value={formData.pickupDate}
+                                    onChange={handleChange}
+                                    min={new Date().toISOString().split('T')[0]}
+                                    className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="pickupTime" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Pickup Time
+                                </label>
+                                <input
+                                    id="pickupTime"
+                                    name="pickupTime"
+                                    type="time"
+                                    value={formData.pickupTime}
+                                    onChange={handleChange}
+                                    className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    required
+                                />
+                            </div>
+                            <div className="md:col-span-2 relative">
+                                <label htmlFor="pickupAddress" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Pickup Address
+                                </label>
+                                <input
+                                    id="pickupAddress"
+                                    name="pickupAddress"
+                                    type="text"
+                                    value={formData.pickupAddress}
+                                    onChange={handleChange}
+                                    placeholder="Full pickup address (street, city, state, zip)"
+                                    className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${pickupVerified ? 'border-green-500 bg-green-50' : ''}`}
+                                    required
+                                />
+                                {pickupVerified !== null && pickupVerified && (
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
+                                        <span className="text-base leading-none">✓</span>
+                                        <span>Verified</span>
+                                    </span>
+                                )}
+                            </div>
+                            <div>
+                                <label htmlFor="pickupContactName" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Contact Name
+                                </label>
+                                <input
+                                    id="pickupContactName"
+                                    name="pickupContactName"
+                                    type="text"
+                                    value={formData.pickupContactName}
+                                    onChange={handleChange}
+                                    placeholder="Name at pickup location"
+                                    className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="pickupContactPhone" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Contact Phone
+                                </label>
+                                <input
+                                    id="pickupContactPhone"
+                                    name="pickupContactPhone"
+                                    type="tel"
+                                    value={formData.pickupContactPhone}
+                                    onChange={handleChange}
+                                    placeholder="Phone number"
+                                    className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label htmlFor="pickupInstructions" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Pickup Instructions
+                                </label>
+                                <textarea
+                                    id="pickupInstructions"
+                                    name="pickupInstructions"
+                                    value={formData.pickupInstructions}
+                                    onChange={handleChange}
+                                    placeholder="Any special instructions..."
+                                    rows={3}
+                                    className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="totalPieces" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Total Pieces
+                                </label>
+                                <input
+                                    id="totalPieces"
+                                    name="totalPieces"
+                                    type="number"
+                                    value={formData.totalPieces}
+                                    onChange={handleChange}
+                                    placeholder="e.g., 5"
+                                    min="1"
+                                    className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="orderWeight" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Order Weight (lbs)
+                                </label>
+                                <input
+                                    id="orderWeight"
+                                    name="orderWeight"
+                                    type="number"
+                                    step="0.1"
+                                    value={formData.orderWeight}
+                                    onChange={handleChange}
+                                    placeholder="e.g., 10.5"
+                                    min="0.1"
+                                    className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    required
+                                />
+                            </div>
                         </div>
                         <div className="mt-4">
                             <button
@@ -334,6 +471,18 @@ export default function Schedule() {
                                     </GoogleMap>
                                 </LoadScript>
                             </div>
+                        )}
+                        {pickupVerified && (
+                            <div className="mt-2 text-sm">
+                                <span className="font-medium text-green-700">Verified as:</span>{' '}
+                                {pickupVerified}
+                                {pickupVerified !== formData.pickupAddress && (
+                                    <span className="text-yellow-600 ml-2">(Google suggestion applied)</span>
+                                )}
+                            </div>
+                        )}
+                        {pickupCoords && !pickupVerified && (
+                            <p className="mt-2 text-sm text-gray-500">Address verified on map ↑</p>
                         )}
                     </div>
 
@@ -364,7 +513,7 @@ export default function Schedule() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-2 relative">
                                 <label htmlFor="dropoffAddress" className="block text-sm font-medium text-gray-700 mb-1">
                                     Dropoff Address
                                 </label>
@@ -375,9 +524,15 @@ export default function Schedule() {
                                     value={formData.dropoffAddress}
                                     onChange={handleChange}
                                     placeholder="Full dropoff address"
-                                    className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${dropoffVerified ? 'border-green-500 bg-green-50' : ''}`}
                                     required
                                 />
+                                {dropoffVerified !== null && dropoffVerified && (
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
+                                        <span className="text-base leading-none">✓</span>
+                                        <span>Verified</span>
+                                    </span>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="dropoffContactName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -443,6 +598,15 @@ export default function Schedule() {
                                         <Marker position={dropoffCoords} label="Dropoff" />
                                     </GoogleMap>
                                 </LoadScript>
+                            </div>
+                        )}
+                        {dropoffVerified && (
+                            <div className="mt-2 text-sm">
+                                <span className="font-medium text-green-700">Verified as:</span>{' '}
+                                {dropoffVerified}
+                                {dropoffVerified !== formData.dropoffAddress && (
+                                    <span className="text-yellow-600 ml-2">(Google suggestion applied)</span>
+                                )}
                             </div>
                         )}
                     </div>
