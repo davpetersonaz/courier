@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { GoogleMap, LoadScript, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { useLoadScript } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
@@ -65,6 +66,11 @@ export default function Schedule() {
     const [mapError, setMapError] = useState<string | null>(null);
     const [pickupVerified, setPickupVerified] = useState<string | null>(null);
     const [dropoffVerified, setDropoffVerified] = useState<string | null>(null);
+
+    const { isLoaded, loadError } = useLoadScript({
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+        // libraries: ['places'], // add later for autocomplete
+    });
 
     // Clear verification badge if user edits after verify
     useEffect(() => {
@@ -539,8 +545,10 @@ export default function Schedule() {
                     {(pickupCoords || dropoffCoords) && (
                         <div className="border border-gray-300 p-6 rounded-md">
                             <h2 className="text-2xl font-semibold mb-4">Location Preview & Route</h2>
+                            {loadError && <p className="text-red-600 mb-2">Failed to load Google Maps: {loadError.message}</p>}
                             {mapError && <p className="text-red-600 mb-2">{mapError}</p>}
-                            <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
+                            {!isLoaded && <p className="text-gray-500">Loading map...</p>}
+                            {isLoaded && (
                                 <GoogleMap
                                     mapContainerStyle={mapContainerStyle}
                                     center={pickupCoords || dropoffCoords || { lat: 33.4484, lng: -112.0740 }}
@@ -550,10 +558,9 @@ export default function Schedule() {
                                     {dropoffCoords && <Marker position={dropoffCoords} label="Dropoff" />}
                                     {directions && <DirectionsRenderer directions={directions} />}
                                 </GoogleMap>
-                            </LoadScript>
+                            )}
                         </div>
                     )}
-
                     {/* Save Recipient Checkbox */}
                     <div className="flex items-center space-x-2 my-6">
                         <input
