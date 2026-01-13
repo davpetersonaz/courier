@@ -367,7 +367,7 @@ export default function Schedule() {
                                     >
                                         <input
                                             id="pickupAddress"
-                                            name="pickupAddress"
+                                            name="pickup-unique-address-field"
                                             type="text"
                                             value={formData.pickupAddress}
                                             onChange={handleChange}
@@ -545,7 +545,7 @@ export default function Schedule() {
                                     >
                                         <input
                                             id="dropoffAddress"
-                                            name="dropoffAddress"
+                                            name="dropoff-unique-address-field"
                                             type="text"
                                             value={formData.dropoffAddress}
                                             onChange={handleChange}
