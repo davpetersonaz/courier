@@ -170,7 +170,8 @@ export default function Schedule() {
     const verifyAddress = async (
         address: string,
         setCoords: React.Dispatch<React.SetStateAction<{ lat: number; lng: number } | null>>,
-        setVerified: React.Dispatch<React.SetStateAction<string | null>>
+        setVerified: React.Dispatch<React.SetStateAction<string | null>>,
+        fieldName: 'pickupAddress' | 'dropoffAddress'
     ) => {
         if (!address || !GOOGLE_MAPS_API_KEY) {
             setMapError('Google Maps API key missing');
@@ -194,8 +195,7 @@ export default function Schedule() {
 
             if (formatted !== address) {
                 if (confirm(`Did you mean: ${formatted}?`)) {
-                    const field = address.includes('pickup') ? 'pickupAddress' : 'dropoffAddress';
-                    setFormData(prev => ({ ...prev, [field]: formatted }));
+                    setFormData(prev => ({ ...prev, [fieldName]: formatted }));
                 }
             }
         } catch (err) {
@@ -205,8 +205,8 @@ export default function Schedule() {
     };
 
 
-    const handleVerifyPickup = () => verifyAddress(formData.pickupAddress, setPickupCoords, setPickupVerified);
-    const handleVerifyDropoff = () => verifyAddress(formData.dropoffAddress, setDropoffCoords, setDropoffVerified);
+    const handleVerifyPickup = () => verifyAddress(formData.pickupAddress, setPickupCoords, setPickupVerified, 'pickupAddress');
+    const handleVerifyDropoff = () => verifyAddress(formData.dropoffAddress, setDropoffCoords, setDropoffVerified, 'dropoffAddress');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -317,11 +317,14 @@ export default function Schedule() {
                                     className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${pickupVerified ? 'border-green-500 bg-green-50' : ''}`}
                                     required
                                 />
-                                {pickupVerified !== null && pickupVerified && (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
-                                        <span className="text-base leading-none">✓</span>
-                                        <span>Verified</span>
-                                    </span>
+                                {pickupVerified && (
+                                    <div className="mt-2 text-sm">
+                                        <span className="font-medium text-green-700">Verified as:</span>{' '}
+                                        {pickupVerified}
+                                        {pickupVerified !== formData.pickupAddress && (
+                                            <span className="text-yellow-600 ml-2">(Google suggestion applied)</span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             <div>
