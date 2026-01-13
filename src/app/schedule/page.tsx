@@ -69,6 +69,8 @@ export default function Schedule() {
     const [dropoffVerified, setDropoffVerified] = useState<string | null>(null);
     const pickupAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
     const dropoffAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+    const pickupInputRef = useRef<HTMLInputElement>(null);
+    const dropoffInputRef = useRef<HTMLInputElement>(null);
 
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: GOOGLE_MAPS_API_KEY,
@@ -122,6 +124,26 @@ export default function Schedule() {
             setDirections(null);
         }
     }, [pickupCoords, dropoffCoords]);
+
+    useEffect(() => {
+        const handleFocus = (input: HTMLInputElement | null) => {
+            if (input) {
+                input.setAttribute('readonly', 'readonly');
+                input.focus(); // refocus to apply
+                setTimeout(() => {
+                    input.removeAttribute('readonly');
+                }, 50); // short delay to allow typing
+            }
+        };
+        const pickup = pickupInputRef.current;
+        const dropoff = dropoffInputRef.current;
+        if (pickup) pickup.addEventListener('focus', () => handleFocus(pickup));
+        if (dropoff) dropoff.addEventListener('focus', () => handleFocus(dropoff));
+        return () => {
+            pickup?.removeEventListener('focus', () => handleFocus(pickup));
+            dropoff?.removeEventListener('focus', () => handleFocus(dropoff));
+        };
+    }, []);
 
     if (status === 'loading') {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -368,6 +390,7 @@ export default function Schedule() {
                                         <input
                                             id="pickupAddress"
                                             name="pickup-unique-address-field"
+                                            ref={pickupInputRef}
                                             type="text"
                                             value={formData.pickupAddress}
                                             onChange={handleChange}
@@ -546,6 +569,7 @@ export default function Schedule() {
                                         <input
                                             id="dropoffAddress"
                                             name="dropoff-unique-address-field"
+                                            ref={dropoffInputRef}
                                             type="text"
                                             value={formData.dropoffAddress}
                                             onChange={handleChange}
