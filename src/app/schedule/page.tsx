@@ -377,11 +377,15 @@ export default function Schedule() {
                                         onLoad={(autocomplete) => {
                                             pickupAutocompleteRef.current = autocomplete;
                                         }}
-                                        onPlaceChanged={() => handlePlaceSelect(
-                                            'pickupAddress',
-                                            setPickupCoords,
-                                            setPickupVerified
-                                        )}
+                                        onPlaceChanged={() => {
+                                            const place = pickupAutocompleteRef.current?.getPlace();
+                                            if (place?.formatted_address && place.geometry?.location) {
+                                                const formatted = place.formatted_address;
+                                                setFormData(prev => ({ ...prev, pickupAddress: formatted }));
+                                                setPickupCoords({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
+                                                setPickupVerified(formatted);
+                                            }
+                                        }}
                                         options={{
                                             types: ['address'], // restrict to full addresses
                                             componentRestrictions: { country: 'us' }, // optional: US only
@@ -392,12 +396,13 @@ export default function Schedule() {
                                             name="pickup-unique-address-field"
                                             ref={pickupInputRef}
                                             type="text"
-                                            value={formData.pickupAddress}
+                                            defaultValue={formData.pickupAddress}
                                             onChange={handleChange}
                                             placeholder="Start typing your pickup address..."
                                             autoComplete="off new-address-line1"  // combined values — browsers respect one or the other
                                             autoCorrect="off"                     // macOS/iOS
                                             spellCheck="false"                    // extra layer
+                                            data-1p-ignore="true"
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 pickupVerified ? 'border-green-500 bg-green-50' : ''
                                             }`}
@@ -556,11 +561,15 @@ export default function Schedule() {
                                         onLoad={(autocomplete) => {
                                             dropoffAutocompleteRef.current = autocomplete;
                                         }}
-                                        onPlaceChanged={() => handlePlaceSelect(
-                                            'dropoffAddress',
-                                            setDropoffCoords,
-                                            setDropoffVerified
-                                        )}
+                                        onPlaceChanged={() => {
+                                            const place = dropoffAutocompleteRef.current?.getPlace();
+                                            if (place?.formatted_address && place.geometry?.location) {
+                                                const formatted = place.formatted_address;
+                                                setFormData(prev => ({ ...prev, dropoffAddress: formatted }));
+                                                setDropoffCoords({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
+                                                setDropoffVerified(formatted);
+                                            }
+                                        }}
                                         options={{
                                             types: ['address'],
                                             componentRestrictions: { country: 'us' },
@@ -571,12 +580,13 @@ export default function Schedule() {
                                             name="dropoff-unique-address-field"
                                             ref={dropoffInputRef}
                                             type="text"
-                                            value={formData.dropoffAddress}
+                                            defaultValue={formData.dropoffAddress}
                                             onChange={handleChange}
                                             placeholder="Start typing your dropoff address..."
                                             autoComplete="off new-address-line1"  // combined values — browsers respect one or the other
                                             autoCorrect="off"                     // macOS/iOS
                                             spellCheck="false"                    // extra layer
+                                            data-1p-ignore="true"
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 dropoffVerified ? 'border-green-500 bg-green-50' : ''
                                             }`}
