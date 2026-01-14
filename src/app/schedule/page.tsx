@@ -378,12 +378,21 @@ export default function Schedule() {
                                             pickupAutocompleteRef.current = autocomplete;
                                         }}
                                         onPlaceChanged={() => {
-                                            const place = pickupAutocompleteRef.current?.getPlace();
-                                            if (place?.formatted_address && place.geometry?.location) {
-                                                const formatted = place.formatted_address;
-                                                setFormData(prev => ({ ...prev, pickupAddress: formatted }));
-                                                setPickupCoords({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
-                                                setPickupVerified(formatted);
+                                            const input = pickupInputRef.current;
+                                            if (input) {
+                                                const place = pickupAutocompleteRef.current?.getPlace();
+                                                if (place?.formatted_address && place.geometry?.location) {
+                                                    input.value = place.formatted_address; // direct DOM set
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        pickupAddress: place.formatted_address!,  // ! tells TS it's definitely string
+                                                    }));
+                                                    setPickupCoords({
+                                                        lat: place.geometry.location.lat(),
+                                                        lng: place.geometry.location.lng(),
+                                                    });
+                                                    setPickupVerified(place.formatted_address);
+                                                }
                                             }
                                         }}
                                         options={{
@@ -569,12 +578,21 @@ export default function Schedule() {
                                             dropoffAutocompleteRef.current = autocomplete;
                                         }}
                                         onPlaceChanged={() => {
-                                            const place = dropoffAutocompleteRef.current?.getPlace();
-                                            if (place?.formatted_address && place.geometry?.location) {
-                                                const formatted = place.formatted_address;
-                                                setFormData(prev => ({ ...prev, dropoffAddress: formatted }));
-                                                setDropoffCoords({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
-                                                setDropoffVerified(formatted);
+                                            const input = dropoffInputRef.current;
+                                            if (input) {
+                                                const place = dropoffAutocompleteRef.current?.getPlace();
+                                                if (place?.formatted_address && place.geometry?.location) {
+                                                    input.value = place.formatted_address; // direct DOM set
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        dropoffAddress: place.formatted_address!,  // ! tells TS it's definitely string
+                                                    }));
+                                                    setDropoffCoords({
+                                                        lat: place.geometry.location.lat(),
+                                                        lng: place.geometry.location.lng(),
+                                                    });
+                                                    setDropoffVerified(place.formatted_address);
+                                                }
                                             }
                                         }}
                                         options={{
