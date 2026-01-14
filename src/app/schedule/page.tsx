@@ -396,8 +396,12 @@ export default function Schedule() {
                                             name="pickup-unique-address-field"
                                             ref={pickupInputRef}
                                             type="text"
-                                            defaultValue={formData.pickupAddress}
-                                            onChange={handleChange}
+                                            onChange={(e) => {
+                                                setFormData(prev => ({ ...prev, pickupAddress: e.target.value }));
+                                            }}
+                                            onBlur={(e) => {
+                                                setFormData(prev => ({ ...prev, pickupAddress: e.target.value }));
+                                            }}
                                             placeholder="Start typing your pickup address..."
                                             autoComplete="off new-password new-address-line1 chrome-off"
                                             autoCorrect="off"                     // macOS/iOS
@@ -583,8 +587,12 @@ export default function Schedule() {
                                             name="dropoff-unique-address-field"
                                             ref={dropoffInputRef}
                                             type="text"
-                                            defaultValue={formData.dropoffAddress}
-                                            onChange={handleChange}
+                                            onChange={(e) => {
+                                                setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }));
+                                            }}
+                                            onBlur={(e) => {
+                                                setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }));
+                                            }}
                                             placeholder="Start typing your dropoff address..."
                                             autoComplete="off new-password new-address-line1 chrome-off"
                                             autoCorrect="off"                     // macOS/iOS
