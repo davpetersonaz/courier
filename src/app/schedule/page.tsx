@@ -126,23 +126,24 @@ export default function Schedule() {
     }, [pickupCoords, dropoffCoords]);
 
     useEffect(() => {
-        const handleFocus = (input: HTMLInputElement | null) => {
-            if (input) {
+        const suppressBraveSuggestions = (input: HTMLInputElement | null) => {
+            if (!input) return;
+            const onFocus = () => {
                 input.setAttribute('readonly', 'readonly');
-                input.focus(); // refocus to apply
+                input.blur(); // force blur to kill popup
                 setTimeout(() => {
-                    input.removeAttribute('readonly');
-                }, 50); // short delay to allow typing
-            }
+                    input.focus();
+                    setTimeout(() => {
+                        input.removeAttribute('readonly');
+                        input.focus(); // double focus to ensure
+                    }, 30);
+                }, 30);
+            };
+            input.addEventListener('focus', onFocus);
+            return () => input.removeEventListener('focus', onFocus);
         };
-        const pickup = pickupInputRef.current;
-        const dropoff = dropoffInputRef.current;
-        if (pickup) pickup.addEventListener('focus', () => handleFocus(pickup));
-        if (dropoff) dropoff.addEventListener('focus', () => handleFocus(dropoff));
-        return () => {
-            pickup?.removeEventListener('focus', () => handleFocus(pickup));
-            dropoff?.removeEventListener('focus', () => handleFocus(dropoff));
-        };
+        suppressBraveSuggestions(pickupInputRef.current);
+        suppressBraveSuggestions(dropoffInputRef.current);
     }, []);
 
     if (status === 'loading') {
@@ -241,32 +242,6 @@ export default function Schedule() {
         } catch (err) {
             console.error('Geocode error:', err);
             setMapError('Could not verify address');
-        }
-    };
-
-    const handlePlaceSelect = (
-        fieldName: 'pickupAddress' | 'dropoffAddress',
-        setCoords: React.Dispatch<React.SetStateAction<{ lat: number; lng: number } | null>>,
-        setVerified: React.Dispatch<React.SetStateAction<string | null>>
-    ) => {
-        const autocompleteRef = fieldName === 'pickupAddress'
-            ? pickupAutocompleteRef.current
-            : dropoffAutocompleteRef.current;
-        if (autocompleteRef) {
-            const place = autocompleteRef.getPlace();
-            if (place?.formatted_address && place.geometry?.location) {
-                const formatted = place.formatted_address;
-                const lat = place.geometry.location.lat();
-                const lng = place.geometry.location.lng();
-
-                // Update formData directly with the formatted address
-                setFormData(prev => ({
-                    ...prev,
-                    [fieldName]: formatted,
-                }));
-                setCoords({ lat, lng });
-                setVerified(formatted);
-            }
         }
     };
 
@@ -419,6 +394,7 @@ export default function Schedule() {
                                             data-1p-ignore="true"           // ignore 1Password
                                             data-lpignore="true"            // ignore LastPass
                                             data-form-type="address"        // sometimes helps
+                                            data-brave-ignore-autofill="true"
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 pickupVerified ? 'border-green-500 bg-green-50' : ''
                                             }`}
@@ -619,6 +595,7 @@ export default function Schedule() {
                                             data-1p-ignore="true"           // ignore 1Password
                                             data-lpignore="true"            // ignore LastPass
                                             data-form-type="address"        // sometimes helps
+                                            data-brave-ignore-autofill="true"
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 dropoffVerified ? 'border-green-500 bg-green-50' : ''
                                             }`}
