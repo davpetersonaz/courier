@@ -399,10 +399,13 @@ export default function Schedule() {
                                             defaultValue={formData.pickupAddress}
                                             onChange={handleChange}
                                             placeholder="Start typing your pickup address..."
-                                            autoComplete="off new-address-line1"  // combined values — browsers respect one or the other
+                                            autoComplete="off new-password new-address-line1 chrome-off"
                                             autoCorrect="off"                     // macOS/iOS
+                                            autoCapitalize="off"
                                             spellCheck="false"                    // extra layer
-                                            data-1p-ignore="true"
+                                            data-1p-ignore="true"           // ignore 1Password
+                                            data-lpignore="true"            // ignore LastPass
+                                            data-form-type="address"        // sometimes helps
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 pickupVerified ? 'border-green-500 bg-green-50' : ''
                                             }`}
@@ -583,10 +586,13 @@ export default function Schedule() {
                                             defaultValue={formData.dropoffAddress}
                                             onChange={handleChange}
                                             placeholder="Start typing your dropoff address..."
-                                            autoComplete="off new-address-line1"  // combined values — browsers respect one or the other
+                                            autoComplete="off new-password new-address-line1 chrome-off"
                                             autoCorrect="off"                     // macOS/iOS
+                                            autoCapitalize="off"
                                             spellCheck="false"                    // extra layer
-                                            data-1p-ignore="true"
+                                            data-1p-ignore="true"           // ignore 1Password
+                                            data-lpignore="true"            // ignore LastPass
+                                            data-form-type="address"        // sometimes helps
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 dropoffVerified ? 'border-green-500 bg-green-50' : ''
                                             }`}
