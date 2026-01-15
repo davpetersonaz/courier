@@ -1,6 +1,6 @@
 // src/app/schedule/page.tsx
 'use client';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
@@ -78,6 +78,27 @@ export default function Schedule() {
         preventGoogleFontsLoading: true
     });
 
+    useEffect(() => {
+        const suppressBraveSuggestions = (input: HTMLInputElement | null) => {
+            if (!input) return;
+            const onFocus = () => {
+                input.setAttribute('readonly', 'readonly');
+                input.blur(); // force blur to kill popup
+                setTimeout(() => {
+                    input.focus();
+                    setTimeout(() => {
+                        input.removeAttribute('readonly');
+                        input.focus(); // double focus to ensure
+                    }, 30);
+                }, 30);
+            };
+            input.addEventListener('focus', onFocus);
+            return () => input.removeEventListener('focus', onFocus);
+        };
+        suppressBraveSuggestions(pickupInputRef.current);
+        suppressBraveSuggestions(dropoffInputRef.current);
+    }, []);
+
     // Clear verification badge if user edits after verify
     useEffect(() => {
         if (pickupVerified && formData.pickupAddress !== pickupVerified) {
@@ -124,27 +145,6 @@ export default function Schedule() {
             setDirections(null);
         }
     }, [pickupCoords, dropoffCoords]);
-
-    useEffect(() => {
-        const suppressBraveSuggestions = (input: HTMLInputElement | null) => {
-            if (!input) return;
-            const onFocus = () => {
-                input.setAttribute('readonly', 'readonly');
-                input.blur(); // force blur to kill popup
-                setTimeout(() => {
-                    input.focus();
-                    setTimeout(() => {
-                        input.removeAttribute('readonly');
-                        input.focus(); // double focus to ensure
-                    }, 30);
-                }, 30);
-            };
-            input.addEventListener('focus', onFocus);
-            return () => input.removeEventListener('focus', onFocus);
-        };
-        suppressBraveSuggestions(pickupInputRef.current);
-        suppressBraveSuggestions(dropoffInputRef.current);
-    }, []);
 
     if (status === 'loading') {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -198,55 +198,7 @@ export default function Schedule() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        // Clear verification & coords if user edits manually
-        if (name === 'pu-loc-unique') {
-            setPickupVerified(null);
-            setPickupCoords(null);
-        } else if (name === 'do-loc-unique') {
-            setDropoffVerified(null);
-            setDropoffCoords(null);
-        }
     };
-
-    const verifyAddress = async (
-        address: string,
-        setCoords: React.Dispatch<React.SetStateAction<{ lat: number; lng: number } | null>>,
-        setVerified: React.Dispatch<React.SetStateAction<string | null>>,
-        fieldName: 'pickupAddress' | 'dropoffAddress'
-    ) => {
-        if (!address || !GOOGLE_MAPS_API_KEY) {
-            setMapError('Google Maps API key missing');
-            return;
-        }
-
-        try {
-            const geocoder = new google.maps.Geocoder();
-            const response = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
-                geocoder.geocode({ address }, (results, status) => {
-                    if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) resolve(results);
-                    else reject(status);
-                });
-            });
-
-            const result = response[0];
-            const location = result.geometry.location;
-            setCoords({ lat: location.lat(), lng: location.lng() });
-            const formatted = result.formatted_address;
-            setVerified(formatted);
-
-            if (formatted !== address) {
-                if (confirm(`Did you mean: ${formatted}?`)) {
-                    setFormData(prev => ({ ...prev, [fieldName]: formatted }));
-                }
-            }
-        } catch (err) {
-            console.error('Geocode error:', err);
-            setMapError('Could not verify address');
-        }
-    };
-
-    const handleVerifyPickup = () => verifyAddress(formData.pickupAddress, setPickupCoords, setPickupVerified, 'pickupAddress');
-    const handleVerifyDropoff = () => verifyAddress(formData.dropoffAddress, setDropoffCoords, setDropoffVerified, 'dropoffAddress');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -254,12 +206,10 @@ export default function Schedule() {
             alert('Please fill in pickup time, total pieces, and order weight.');
             return;
         }
-        // require both addresses verified/geocoded
         if (!pickupCoords || !dropoffCoords) {
             alert('Please verify both addresses before submitting.');
             return;
         }
-
         setIsSubmitting(true);
         try {
             const res = await fetch('/api/orders', {
@@ -377,7 +327,7 @@ export default function Schedule() {
                                     >
                                         <input
                                             id="pu-loc"
-                                            name="pu-loc-unique"
+                                            name="pu-loc-field"
                                             ref={pickupInputRef}
                                             type="text"
                                             defaultValue={formData.pickupAddress}
@@ -397,8 +347,8 @@ export default function Schedule() {
                                 ) : (
                                     <input
                                         // fallback plain input while loading
-                                        id="pickupAddress"
-                                        name="pickupAddress"
+                                        id="pu-loc"
+                                        name="pu-loc-field"
                                         type="text"
                                         value={formData.pickupAddress}
                                         onChange={handleChange}
@@ -490,16 +440,6 @@ export default function Schedule() {
                                 />
                             </div>
                         </div>
-                        <div className="mt-4">
-                            <button
-                                type="button"
-                                onClick={handleVerifyPickup}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                disabled={!formData.pickupAddress}
-                            >
-                                Verify Pickup Address
-                            </button>
-                        </div>
                         {pickupVerified && (
                             <div className="mt-2 text-sm">
                                 <span className="font-medium text-green-700">Verified as:</span> {pickupVerified}
@@ -571,7 +511,7 @@ export default function Schedule() {
                                     >
                                         <input
                                             id="do-loc"
-                                            name="do-loc-unique"
+                                            name="do-loc-field"
                                             ref={dropoffInputRef}
                                             type="text"
                                             defaultValue={formData.dropoffAddress}
@@ -590,8 +530,8 @@ export default function Schedule() {
                                     </Autocomplete>
                                 ) : (
                                     <input
-                                        id="dropoffAddress"
-                                        name="dropoffAddress"
+                                        id="do-loc"
+                                        name="do-loc-field"
                                         type="text"
                                         value={formData.dropoffAddress}
                                         onChange={handleChange}
@@ -649,16 +589,6 @@ export default function Schedule() {
                                     className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
-                        </div>
-                        <div className="mt-4">
-                            <button
-                                type="button"
-                                onClick={handleVerifyDropoff}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                disabled={!formData.dropoffAddress}
-                            >
-                                Verify Dropoff Address
-                            </button>
                         </div>
                         {dropoffVerified && (
                             <div className="mt-2 text-sm">
