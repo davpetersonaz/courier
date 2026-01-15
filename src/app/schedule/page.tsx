@@ -199,10 +199,10 @@ export default function Schedule() {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
         // Clear verification & coords if user edits manually
-        if (name === 'pickupAddress') {
+        if (name === 'pu-loc-unique') {
             setPickupVerified(null);
             setPickupCoords(null);
-        } else if (name === 'dropoffAddress') {
+        } else if (name === 'do-loc-unique') {
             setDropoffVerified(null);
             setDropoffCoords(null);
         }
@@ -344,7 +344,7 @@ export default function Schedule() {
                                 />
                             </div>
                             <div className="md:col-span-2 relative">
-                                <label htmlFor="pickupAddress" className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="pu-loc" className="block text-sm font-medium text-gray-700 mb-1">
                                     Pickup Address
                                 </label>
                                 {isLoaded ? (
@@ -376,24 +376,17 @@ export default function Schedule() {
                                         }}
                                     >
                                         <input
-                                            id="pickupAddress"
-                                            name="pickup-unique-address-field"
+                                            id="pu-loc"
+                                            name="pu-loc-unique"
                                             ref={pickupInputRef}
                                             type="text"
-                                            onChange={(e) => {
-                                                setFormData(prev => ({ ...prev, pickupAddress: e.target.value }));
-                                            }}
-                                            onBlur={(e) => {
-                                                setFormData(prev => ({ ...prev, pickupAddress: e.target.value }));
-                                            }}
-                                            placeholder="Start typing your pickup address..."
-                                            autoComplete="off new-password new-address-line1 chrome-off"
+                                            defaultValue={formData.pickupAddress}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
+                                            onBlur={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
+                                            placeholder="Start typing the pickup location..."
+                                            autoComplete="off new-password"
                                             autoCorrect="off"                     // macOS/iOS
-                                            autoCapitalize="off"
                                             spellCheck="false"                    // extra layer
-                                            data-1p-ignore="true"           // ignore 1Password
-                                            data-lpignore="true"            // ignore LastPass
-                                            data-form-type="address"        // sometimes helps
                                             data-brave-ignore-autofill="true"
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 pickupVerified ? 'border-green-500 bg-green-50' : ''
@@ -545,7 +538,7 @@ export default function Schedule() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2 relative">
-                                <label htmlFor="dropoffAddress" className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="do-loc" className="block text-sm font-medium text-gray-700 mb-1">
                                     Dropoff Address
                                 </label>
                                 {isLoaded ? (
@@ -577,24 +570,17 @@ export default function Schedule() {
                                         }}
                                     >
                                         <input
-                                            id="dropoffAddress"
-                                            name="dropoff-unique-address-field"
+                                            id="do-loc"
+                                            name="do-loc-unique"
                                             ref={dropoffInputRef}
                                             type="text"
-                                            onChange={(e) => {
-                                                setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }));
-                                            }}
-                                            onBlur={(e) => {
-                                                setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }));
-                                            }}
-                                            placeholder="Start typing your dropoff address..."
-                                            autoComplete="off new-password new-address-line1 chrome-off"
+                                            defaultValue={formData.dropoffAddress}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
+                                            onBlur={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
+                                            placeholder="Start typing the dropoff location..."
+                                            autoComplete="off new-password"
                                             autoCorrect="off"                     // macOS/iOS
-                                            autoCapitalize="off"
                                             spellCheck="false"                    // extra layer
-                                            data-1p-ignore="true"           // ignore 1Password
-                                            data-lpignore="true"            // ignore LastPass
-                                            data-form-type="address"        // sometimes helps
                                             data-brave-ignore-autofill="true"
                                             className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
                                                 dropoffVerified ? 'border-green-500 bg-green-50' : ''
