@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-
         const {
             pickupDate,
             pickupTime,
@@ -43,20 +42,31 @@ export async function POST(request: NextRequest) {
             dropoffContactName,
             dropoffContactPhone,
             dropoffInstructions,
-            saveRecipient = false
+            saveRecipient = false,
+            service
         } = body;
+
+        // Validate required fields
+        if (!pickupDate || !pickupTime || !pickupAddress || !dropoffAddress) {
+            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        // validate service
+        if (!service || !['1hr', '2hr', '4hr', 'routed'].includes(service)) {
+            return NextResponse.json({ error: 'Invalid or missing service type' }, { status: 400 });
+        }
 
         // Validate numbers
         const pieces = parseInt(totalPieces);
         const weight = parseFloat(orderWeight);
         if (isNaN(pieces) || isNaN(weight)) {
-            throw new Error('Invalid total pieces or weight');
+            return NextResponse.json({ error: 'Invalid total pieces or weight' }, { status: 400 });
         }
 
         // Combine date and time into pickupDateTime
         const pickupDateTime = new Date(`${pickupDate}T${pickupTime}:00`);
         if (isNaN(pickupDateTime.getTime())) {
-            throw new Error('Invalid date or time');
+            return NextResponse.json({ error: 'Invalid date or time' }, { status: 400 });
         }
 
         const order = await prisma.order.create({
@@ -76,7 +86,8 @@ export async function POST(request: NextRequest) {
                 dropoffContactName,
                 dropoffContactPhone,
                 dropoffInstructions,
-                status: OrderStatus.PENDING
+                status: OrderStatus.PENDING,
+                service
             },
         });
 
@@ -109,6 +120,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, orderId: order.id });
     } catch (error) {
         console.error('Order creation error:', error);
-        return NextResponse.json({ error: 'Failed to create order: ' + (error as Error).message }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to create order: ' + (error as Error).message }, 
+            { status: 500 }
+        );
     }
 }

@@ -22,6 +22,7 @@ interface OrderFormData {
     dropoffContactName: string;
     dropoffContactPhone: string;
     dropoffInstructions: string;
+    service?: string;
 }
 
 interface Recipient {
@@ -71,12 +72,57 @@ export default function Schedule() {
     const dropoffAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
     const pickupInputRef = useRef<HTMLInputElement>(null);
     const dropoffInputRef = useRef<HTMLInputElement>(null);
+    const [driveTimeMin, setDriveTimeMin] = useState<number | null>(null);
+    const [distanceMiles, setDistanceMiles] = useState<number | null>(null);
+
+    const [loadingPrices, setLoadingPrices] = useState(false);
+    const [prices, setPrices] = useState<{
+        '1hr': number | null;
+        '2hr': number | null;
+        '4hr': number | null;
+        'routed': number | null;
+    }>({
+        '1hr': null,
+        '2hr': null,
+        '4hr': null,
+        'routed': null,
+    });
 
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: GOOGLE_MAPS_API_KEY,
         libraries: ['places'],
         preventGoogleFontsLoading: true
     });
+
+    const calculatePrice = (
+        service: '1hr' | '2hr' | '4hr' | 'routed',
+        distanceMiles: number | null,
+        requestHour: number,
+        driveTimeMinutes: number | null = null
+    ): number => {
+        const services = {
+            '1hr': { min: 25, base: 15, rate: 1.15, hourly: 28 },
+            '2hr': { min: 22, base: 13, rate: 1.05, hourly: 26 },
+            '4hr': { min: 18, base: 10, rate: 0.95, hourly: 24 },
+            'routed': { min: 10, base: 10, rate: 0, hourly: 0 }
+        } as const;
+        if (!services[service]) throw new Error('Invalid service');
+        const config = services[service];
+
+        let basePrice;
+        if (driveTimeMinutes !== null) {
+            const hours = driveTimeMinutes / 60;
+            basePrice = config.base + (config.hourly * hours);
+        } else if (distanceMiles !== null) {
+            basePrice = config.base + (config.rate * distanceMiles);
+        } else {
+            basePrice = config.base; // fallback
+        }
+        let price = Math.max(config.min, basePrice);
+        const surge = (requestHour >= 15 && requestHour <= 19) ? 1.2 : 1.0;
+        price *= surge;
+        return parseFloat(price.toFixed(2));
+    };
 
     useEffect(() => {
         const suppressBraveSuggestions = (input: HTMLInputElement | null) => {
@@ -123,28 +169,65 @@ export default function Schedule() {
 
     // Route calculation (only when both coords ready)
     useEffect(() => {
-        if (pickupCoords && dropoffCoords) {
-            const directionsService = new google.maps.DirectionsService();
-            directionsService.route(
-                {
-                    origin: pickupCoords,
-                    destination: dropoffCoords,
-                    travelMode: google.maps.TravelMode.DRIVING,
-                },
-                (result, status) => {
-                    if (status === google.maps.DirectionsStatus.OK && result) {
-                        setDirections(result);
-                        setMapError(null);
-                    } else {
-                        setDirections(null);
-                        setMapError('Could not calculate route: ' + status);
-                    }
-                }
-            );
-        } else {
+        if (!pickupCoords || !dropoffCoords) {
             setDirections(null);
+            setPrices({ '1hr': null, '2hr': null, '4hr': null, 'routed': null });
+            setDriveTimeMin(null);
+            setDistanceMiles(null);
+            setLoadingPrices(false);
+            return;
         }
-    }, [pickupCoords, dropoffCoords]);
+
+        setLoadingPrices(true);
+        const directionsService = new google.maps.DirectionsService();
+        // Parse pickup date + time into a proper Date object
+        const pickupDateTime = new Date(`${formData.pickupDate}T${formData.pickupTime}:00`);
+        // If pickup time is in the past, fall back to 'now'
+        const departureTime: Date = pickupDateTime > new Date() ? pickupDateTime : new Date();
+
+        directionsService.route(
+            {
+                origin: pickupCoords,
+                destination: dropoffCoords,
+                travelMode: google.maps.TravelMode.DRIVING,
+                drivingOptions: {
+                    departureTime: departureTime,           // ← this is the key
+                    trafficModel: 'bestguess' as google.maps.TrafficModel              // 'bestguess' (default), 'optimistic', 'pessimistic'
+                },
+            },
+            (result, status) => {
+                setLoadingPrices(false);
+                if (status === google.maps.DirectionsStatus.OK && result) {
+                    setDirections(result);
+                    setMapError(null);
+                    // Extract drive time (in seconds) and convert to minutes
+                    const leg = result.routes[0]?.legs[0];
+                    if (leg) {
+                        const durationSec = leg.duration_in_traffic?.value ?? leg.duration?.value ?? 0;
+                        const driveTimeMinCalc = Math.round(durationSec / 60);
+                        console.log('Estimated drive time:', driveTimeMinCalc, 'minutes');
+                        const distanceText = leg.distance?.text ?? '';
+                        const distanceMilesCalc = distanceText ? parseFloat(distanceText.replace(/[^0-9.]/g, '')) : 0;
+                        const requestHour = pickupDateTime.getHours();
+                        setDriveTimeMin(driveTimeMinCalc);
+                        setDistanceMiles(distanceMilesCalc);
+                        setPrices({
+                            '1hr': calculatePrice('1hr', distanceMilesCalc, requestHour, driveTimeMinCalc),
+                            '2hr': calculatePrice('2hr', distanceMilesCalc, requestHour, driveTimeMinCalc),
+                            '4hr': calculatePrice('4hr', distanceMilesCalc, requestHour, driveTimeMinCalc),
+                            'routed': calculatePrice('routed', distanceMilesCalc, requestHour, driveTimeMinCalc),
+                        });
+                    }
+                } else {
+                    setDirections(null);
+                    setPrices({ '1hr': null, '2hr': null, '4hr': null, 'routed': null });
+                    setDriveTimeMin(null);
+                    setDistanceMiles(null);
+                    setMapError('Could not calculate route: ' + status);
+                }
+            }
+        );
+    }, [pickupCoords, dropoffCoords, formData.pickupDate, formData.pickupTime]);
 
     if (status === 'loading') {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -210,6 +293,10 @@ export default function Schedule() {
             alert('Please verify both addresses before submitting.');
             return;
         }
+        if (!formData.service) {
+            alert('Please select a service type.');
+            return;
+        }
         setIsSubmitting(true);
         try {
             const res = await fetch('/api/orders', {
@@ -245,6 +332,7 @@ export default function Schedule() {
             dropoffContactName: '',
             dropoffContactPhone: '',
             dropoffInstructions: '',
+            service: undefined
         });
         setPickupCoords(null);
         setDropoffCoords(null);
@@ -252,6 +340,10 @@ export default function Schedule() {
         setPickupVerified(null);
         setDropoffVerified(null);
         setMapError(null);
+        setDriveTimeMin(null);
+        setDistanceMiles(null);
+        setPrices({ '1hr': null, '2hr': null, '4hr': null, 'routed': null });
+        setLoadingPrices(false);
     };
 
     return (
@@ -601,6 +693,41 @@ export default function Schedule() {
                         )}
                     </div>
 
+                    {loadingPrices ? (
+                        <div className="border border-gray-300 p-6 rounded-md bg-blue-50 text-center">
+                            <p className="text-gray-500">Calculating prices based on route and time...</p>
+                        </div>
+                    ) : prices['1hr'] !== null ? (
+                        <div className="border border-gray-300 p-6 rounded-md bg-blue-50">
+                            <h2 className="text-2xl font-semibold mb-4">Estimated Pricing</h2>
+                            {driveTimeMin !== null && distanceMiles !== null && (
+                                <p className="mb-4 text-center text-gray-700 font-medium">
+                                    Estimated Route: {driveTimeMin} min • {distanceMiles.toFixed(1)} miles
+                                    (predicted traffic at {formData.pickupTime})
+                                </p>
+                            )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            {Object.entries(prices).map(([service, price]) => (
+                                <div
+                                    key={service}
+                                    className={`p-4 bg-white rounded-lg shadow text-center cursor-pointer border-2 ${
+                                        formData.service === service ? 'border-blue-500' : 'border-transparent'
+                                    } hover:border-blue-500 transition`}
+                                    onClick={() => setFormData(prev => ({ ...prev, service }))}
+                                >
+                                    <h3 className="font-bold text-lg capitalize">{service.replace('hr', ' Hour')}</h3>
+                                    <p className="text-2xl font-semibold text-blue-600">
+                                        ${price?.toFixed(2) ?? '—'}
+                                    </p>
+                                </div>
+                            ))}
+                            </div>
+                            <p className="mt-4 text-sm text-gray-600 text-center">
+                                Prices are estimates using predicted traffic at your pickup time. Final cost may vary.
+                            </p>
+                        </div>
+                    ) : null}
+
                     {/* Single Unified Map Preview - appears when both addresses verified */}
                     {(pickupCoords || dropoffCoords) && (
                         <div className="border border-gray-300 p-6 rounded-md">
@@ -647,7 +774,7 @@ export default function Schedule() {
                         </button>
                         <button
                             type="submit"
-                            disabled={isSubmitting || !pickupCoords || !dropoffCoords}
+                            disabled={isSubmitting || !pickupCoords || !dropoffCoords || !formData.service}
                             className={`bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 ${
                                 !pickupCoords || !dropoffCoords ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
