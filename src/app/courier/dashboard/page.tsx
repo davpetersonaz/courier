@@ -5,6 +5,7 @@ import { OrderStatus } from '@/lib/order-status';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
+import AvailablePickups from '@/components/AvailablePickups';
 
 async function updateOrderStatus(orderId: number, newStatus: OrderStatus) {
     'use server';
@@ -137,64 +138,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
 
                 {/* Available Pickups */}
                 {tab === 'available' && (
-                    <section className="bg-white rounded-lg shadow overflow-hidden">
-                        {pendingOrders.length === 0 ? (
-                            <div className="p-8 text-center text-gray-600">
-                                No pending pickups right now. Check back soon!
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-50 border-b">
-                                        <tr>
-                                            <th className="px-4 py-3 font-medium text-gray-700">Order ID</th>
-                                            <th className="px-4 py-3 font-medium text-gray-700">Customer</th>
-                                            <th className="px-4 py-3 font-medium text-gray-700 hidden md:table-cell">Pickup Time</th>
-                                            <th className="px-4 py-3 font-medium text-gray-700 hidden lg:table-cell">Pickup Address</th>
-                                            <th className="px-4 py-3 font-medium text-gray-700 hidden lg:table-cell">Dropoff</th>
-                                            <th className="px-4 py-3 font-medium text-gray-700">Details</th>
-                                            <th className="px-4 py-3 font-medium text-gray-700 text-center">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        {pendingOrders.map((order) => (
-                                            <tr key={order.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-4 font-medium">#{order.id}</td>
-                                                <td className="px-4 py-4">
-                                                    <div>
-                                                        <p>{order.customer.firstName} {order.customer.lastName || ''}</p>
-                                                        <p className="text-xs text-gray-500">{order.customer.phone}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4 hidden md:table-cell">
-                                                    {new Date(order.pickupDate).toLocaleDateString()} <br />
-                                                    <span className="font-medium">{order.pickupTime}</span>
-                                                </td>
-                                                <td className="px-4 py-4 text-xs md:text-sm hidden lg:table-cell">
-                                                    {order.pickupAddress}
-                                                </td>
-                                                <td className="px-4 py-4 text-xs md:text-sm hidden lg:table-cell">
-                                                    {order.dropoffAddress}
-                                                </td>
-                                                <td className="px-4 py-4 text-xs">
-                                                    {order.totalPieces} pcs • {order.orderWeight} lbs
-                                                </td>
-                                                <td className="px-4 py-4 text-center">
-                                                    <form action={updateOrderStatus.bind(null, order.id, OrderStatus.EN_ROUTE_PICKUP)}>
-                                                        <button type="submit"
-                                                            className="px-4 py-2 bg-green-600 text-white text-xs md:text-sm rounded hover:bg-green-700 transition font-medium"
-                                                        >
-                                                            Accept Job
-                                                        </button>
-                                                    </form>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </section>
+                    <AvailablePickups orders={pendingOrders} />
                 )}
 
                 {tab === 'progress' && (
