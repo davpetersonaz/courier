@@ -13,9 +13,10 @@ interface AvailablePickupsProps {
         totalPieces: number;
         orderWeight: number;
     }>;
+    courierAddress: string;
 }
 
-export default function AvailablePickups({ orders }: AvailablePickupsProps) {
+export default function AvailablePickups({ orders, courierAddress }: AvailablePickupsProps) {
     const [selected, setSelected] = useState<number[]>([]);
 
     const toggleSelect = (id: number) => {
@@ -60,10 +61,12 @@ export default function AvailablePickups({ orders }: AvailablePickupsProps) {
         const allStops = [...waypoints, ...dropoffs];
         if (allStops.length === 0) return;
 
-        const origin = 'Current+Location'; // or use geolocation later
+        const origin = courierAddress?.trim() 
+            ? encodeURIComponent(courierAddress) 
+            : 'Current+Location';  // ← use the real address
         const destination = allStops[allStops.length - 1];
         const waypointsParam = allStops.slice(0, -1).join('|');
-        const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${destination}&waypoints=${waypointsParam}&travelmode=driving&optimize=true`;
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypointsParam}&travelmode=driving&optimize=true`;
         window.open(url, '_blank');
     };
 

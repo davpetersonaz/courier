@@ -48,6 +48,13 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
     const tab = resolvedParams.tab || 'available';
     const page = parseInt(resolvedParams.page || '1');
     const courierId = parseInt(session.user.id as string);
+    const courier = await prisma.user.findUnique({
+        where: { id: courierId },
+        select: { address: true, city: true, state: true, zip: true },
+    });
+    const courierAddress = courier
+        ? `${courier.address}, ${courier.city}, ${courier.state} ${courier.zip}`
+        : 'Phoenix, AZ'; // fallback
 
     // Fetch main data
     const [pendingOrders, inProgressOrders, deliveredCount] = await Promise.all([
@@ -138,7 +145,10 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
 
                 {/* Available Pickups */}
                 {tab === 'available' && (
-                    <AvailablePickups orders={pendingOrders} />
+                    <AvailablePickups
+                        orders={pendingOrders}
+                        courierAddress={courierAddress}
+                    />
                 )}
 
                 {tab === 'progress' && (
