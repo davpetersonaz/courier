@@ -10,7 +10,7 @@ export default function Home() {
                     Schedule your pickups and dropoffs with ease.
                 </p>
 
-                <Link href="/register"
+                <Link href="/register" scroll={true}
                     className="inline-block bg-blue-500 text-white px-8 py-4 text-lg rounded-md hover:bg-blue-600 transition"
                 >
                     Get Started

@@ -223,7 +223,7 @@ export default function Register() {
                 </div>
                 <p className="mt-4 text-sm text-center text-gray-600">
                     Already have an account?{' '}
-                    <Link href="/" className="text-blue-500 underline hover:text-blue-600">
+                    <Link href="/" scroll={true} className="text-blue-500 underline hover:text-blue-600">
                         Login
                     </Link>
                 </p>

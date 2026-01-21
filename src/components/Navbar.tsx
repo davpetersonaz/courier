@@ -22,7 +22,7 @@ export default function Navbar() {
                 <div className="flex justify-between items-center h-16">
                     {/* Logo / Home */}
                     <div className="shrink-0">
-                        <Link href="/" className="text-xl font-bold hover:opacity-80">
+                        <Link href="/" scroll={true} className="text-xl font-bold hover:opacity-80">
                             SpeedyCourier
                         </Link>
                     </div>
@@ -31,14 +31,14 @@ export default function Navbar() {
                     <div className="hidden md:flex items-center space-x-6">
                         {session ? (
                             <>
-                                <Link href="/schedule" className="hover:opacity-80 transition">Schedule</Link>
-                                <Link href="/history" className="hover:opacity-80 transition">History</Link>
-                                <Link href="/account" className="hover:opacity-80 transition">My Account</Link>
+                                <Link href="/schedule" scroll={true} className="hover:opacity-80 transition">Schedule</Link>
+                                <Link href="/history" scroll={true} className="hover:opacity-80 transition">History</Link>
+                                <Link href="/account" scroll={true} className="hover:opacity-80 transition">My Account</Link>
                                 <button onClick={handleLogout} className="hover:opacity-80 transition">Logout</button>
                             </>
                         ) : (
                             <>
-                                <Link href="/register" className="hover:opacity-80 transition">Register</Link>
+                                <Link href="/register" scroll={true} className="hover:opacity-80 transition">Register</Link>
                                 <button onClick={openLogin} className="hover:opacity-80 transition">Login</button>
                             </>
                         )}
@@ -78,19 +78,19 @@ export default function Navbar() {
                         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-blue-700">
                             {session ? (
                                 <>
-                                    <Link href="/schedule"
+                                    <Link href="/schedule" scroll={true}
                                         className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
                                         onClick={() => setIsMobileMenuOpen(false)}
                                     >
                                         Schedule
                                     </Link>
-                                    <Link href="/history"
+                                    <Link href="/history" scroll={true}
                                         className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
                                         onClick={() => setIsMobileMenuOpen(false)}
                                     >
                                         History
                                     </Link>
-                                    <Link href="/account"
+                                    <Link href="/account" scroll={true}
                                         className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
                                         onClick={() => setIsMobileMenuOpen(false)}
                                     >
@@ -108,7 +108,7 @@ export default function Navbar() {
                                 </>
                             ) : (
                                 <>
-                                    <Link href="/register"
+                                    <Link href="/register" scroll={true}
                                         className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
                                         onClick={() => setIsMobileMenuOpen(false)}
                                     >

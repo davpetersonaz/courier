@@ -114,7 +114,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
 
                 {/* Tabs - use Link for navigation */}
                 <div className="flex border-b border-gray-300 mb-6 overflow-x-auto">
-                    <Link href="/courier/dashboard?tab=available"
+                    <Link href="/courier/dashboard?tab=available" scroll={true}
                         className={`px-4 py-3 font-medium text-sm md:text-base whitespace-nowrap border-b-2 transition ${
                             tab === 'available'
                                 ? 'border-blue-600 text-blue-600'
@@ -123,7 +123,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                     >
                         Available Pickups ({pendingOrders.length})
                     </Link>
-                    <Link href="/courier/dashboard?tab=progress"
+                    <Link href="/courier/dashboard?tab=progress" scroll={true}
                         className={`px-4 py-3 font-medium text-sm md:text-base whitespace-nowrap border-b-2 transition ml-4 ${
                             tab === 'progress'
                                 ? 'border-blue-600 text-blue-600'
@@ -132,7 +132,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                     >
                         In Progress ({inProgressOrders.length})
                     </Link>
-                    <Link href="/courier/dashboard?tab=history"
+                    <Link href="/courier/dashboard?tab=history" scroll={true}
                         className={`px-4 py-3 font-medium text-sm md:text-base whitespace-nowrap border-b-2 transition ml-4 ${
                             tab === 'history'
                                 ? 'border-blue-600 text-blue-600'
@@ -278,14 +278,14 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                     </p>
                                     <div className="flex gap-2">
                                         {currentPage > 1 && (
-                                            <Link href={`/courier/dashboard?tab=history&page=${currentPage - 1}`}
+                                            <Link href={`/courier/dashboard?tab=history&page=${currentPage - 1}`} scroll={true}
                                                 className="px-4 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
                                             >
                                                 Previous
                                             </Link>
                                         )}
                                         {currentPage < totalPages && (
-                                            <Link href={`/courier/dashboard?tab=history&page=${currentPage + 1}`}
+                                            <Link href={`/courier/dashboard?tab=history&page=${currentPage + 1}`} scroll={true}
                                                 className="px-4 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
                                             >
                                                 Next
