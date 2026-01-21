@@ -1,6 +1,7 @@
 // src/components/AvailablePickups.tsx
 'use client';
 import { useState } from 'react';
+import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 
 interface AvailablePickupsProps {
     orders: Array<{
@@ -18,6 +19,14 @@ interface AvailablePickupsProps {
 
 export default function AvailablePickups({ orders, courierAddress }: AvailablePickupsProps) {
     const [selected, setSelected] = useState<number[]>([]);
+    const [optimizedSequence, setOptimizedSequence] = useState<string[]>([]);
+    const [optimizedRoute, setOptimizedRoute] = useState<google.maps.DirectionsResult | null>(null);
+
+    const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+    const { isLoaded, loadError } = useLoadScript({
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+        libraries: ['places']
+    });
 
     const toggleSelect = (id: number) => {
         setSelected(prev =>
@@ -47,27 +56,66 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
     const generateRoute = () => {
         if (selected.length === 0) return;
 
-        // Build Google Maps URL with waypoints
-        const waypoints = selected
+        // Collect pickups and dropoffs separately
+        const pickups = selected
             .map(id => orders.find(o => o.id === id)?.pickupAddress)
-            .filter((addr): addr is string => !!addr)
-            .map(encodeURIComponent);
+            .filter((addr): addr is string => !!addr);
 
         const dropoffs = selected
             .map(id => orders.find(o => o.id === id)?.dropoffAddress)
-            .filter((addr): addr is string => !!addr)
-            .map(encodeURIComponent);
+            .filter((addr): addr is string => !!addr);
 
-        const allStops = [...waypoints, ...dropoffs];
-        if (allStops.length === 0) return;
+        if (pickups.length === 0 || dropoffs.length === 0) {
+            alert('Missing pickup or dropoff addresses for selected orders');
+            return;
+        }
 
-        const origin = courierAddress?.trim() 
-            ? encodeURIComponent(courierAddress) 
-            : 'Current+Location';  // ← use the real address
-        const destination = allStops[allStops.length - 1];
-        const waypointsParam = allStops.slice(0, -1).join('|');
-        const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypointsParam}&travelmode=driving&optimize=true`;
-        window.open(url, '_blank');
+        // Use Directions API for optimization
+        const directionsService = new google.maps.DirectionsService();
+        directionsService.route(
+            {
+                origin: courierAddress,
+                destination: dropoffs[dropoffs.length - 1], // last dropoff as final stop
+                waypoints: [
+                    // Optimize pickups among themselves (all but last)
+                    ...pickups.slice(0, -1).map(location => ({ location, stopover: true })),
+                    // Optimize dropoffs among themselves (all but last)
+                    ...dropoffs.slice(0, -1).map(location => ({ location, stopover: true })),
+                ],
+                optimizeWaypoints: true,
+                travelMode: google.maps.TravelMode.DRIVING,
+                drivingOptions: {
+                    departureTime: new Date(), // current time for traffic
+                    trafficModel: 'pessimistic' as google.maps.TrafficModel,
+                },
+            },
+            (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK && result) {
+                    // Extract the optimized sequence for display
+                    const orderedWaypoints = result.routes[0].waypoint_order.map(i => {
+                        const allWaypoints = [...pickups.slice(0, -1), ...dropoffs.slice(0, -1)];
+                        return allWaypoints[i];
+                    });
+
+                    const fullSequence = [
+                        courierAddress,                        // Start
+                        ...pickups.slice(0, -1),               // Optimized pickups (except last)
+                        pickups[pickups.length - 1],           // Last pickup (fixed before dropoffs)
+                        ...orderedWaypoints.filter(a => dropoffs.slice(0, -1).includes(a)), // Optimized dropoffs
+                        dropoffs[dropoffs.length - 1],         // Final stop
+                    ].filter(Boolean);
+                    setOptimizedSequence(fullSequence);
+                    setOptimizedRoute(result);
+
+                    // Open Google Maps with the same optimized order
+                    const waypointsParam = orderedWaypoints.map(encodeURIComponent).join('|');
+                    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(courierAddress)}&destination=${encodeURIComponent(dropoffs[dropoffs.length - 1])}&waypoints=${waypointsParam}&travelmode=driving&optimize=true`;
+                    window.open(url, '_blank');
+                } else {
+                    alert(`Could not generate route: ${status}`);
+                }
+            }
+        );
     };
 
     return (
@@ -145,6 +193,39 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                             Generate Optimized Route ({selected.length} selected)
                         </button>
                     </div>
+
+                    {/* Optimized Sequence List */}
+                    {optimizedSequence.length > 0 && (
+                        <div className="p-6 bg-gray-50 border-t">
+                            <h3 className="text-lg font-semibold mb-3">Optimized Route Sequence:</h3>
+                            <ol className="list-decimal pl-6 space-y-2 text-sm">
+                                {optimizedSequence.map((addr, idx) => (
+                                    <li key={idx}>
+                                        {addr}
+                                        {idx === 0 && ' (Start - Your Location)'}
+                                        {idx === optimizedSequence.length - 1 && ' (Final Delivery)'}
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+                    )}
+
+                    {/* Embedded Map */}
+                    {isLoaded ? (
+                        optimizedRoute ? (
+                            <div className="mt-6 border rounded-lg overflow-hidden" style={{ height: '400px' }}>
+                                <GoogleMap
+                                    mapContainerStyle={{ width: '100%', height: '100%' }}
+                                    center={{ lat: 33.4484, lng: -112.0740 }} // Phoenix fallback
+                                    zoom={11}
+                                >
+                                    <DirectionsRenderer directions={optimizedRoute} />
+                                </GoogleMap>
+                            </div>
+                        ) : null
+                    ) : loadError ? (
+                        <p className="p-4 text-red-600">Failed to load Google Maps: {loadError.message}</p>
+                    ) : null}
                 </>
             )}
         </section>
