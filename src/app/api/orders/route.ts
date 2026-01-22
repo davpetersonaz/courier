@@ -42,18 +42,12 @@ export async function POST(request: NextRequest) {
             dropoffContactName,
             dropoffContactPhone,
             dropoffInstructions,
-            saveRecipient = false,
-            service
+            saveRecipient = false
         } = body;
 
         // Validate required fields
         if (!pickupDate || !pickupTime || !pickupAddress || !dropoffAddress) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-        }
-
-        // validate service
-        if (!service || !['1hr', '2hr', '4hr', 'routed'].includes(service)) {
-            return NextResponse.json({ error: 'Invalid or missing service type' }, { status: 400 });
         }
 
         // Validate numbers
@@ -86,8 +80,7 @@ export async function POST(request: NextRequest) {
                 dropoffContactName,
                 dropoffContactPhone,
                 dropoffInstructions,
-                status: OrderStatus.PENDING,
-                service
+                status: OrderStatus.PENDING
             },
         });
 
