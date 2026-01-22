@@ -263,19 +263,17 @@ export default function Schedule() {
     const isBefore9AM = currentHour < 9;
 
     // Same-day only if date = today AND time < 9 AM
-    const isSameDaySelected = formData.pickupDate === todayStr;
-    const canDoSameDay = isBefore9AM && isSameDaySelected;
-    const deliveryType = canDoSameDay ? 'Same-Day' : 'Next-Day';
+    const deliveryType = (isBefore9AM ? 'Same-Day' : 'Next-Day');
 
     // Min date: today only if before 9 AM, otherwise tomorrow
-    const minDate = isBefore9AM ? todayStr : new Date(now.setDate(now.getDate() + 1)).toISOString().split('T')[0];
+    const minDate = todayStr;
 
     // Min time: on today, can't pick past current time
-    const isToday = formData.pickupDate === todayStr;
-    const minTime = isToday ? now.toTimeString().slice(0, 5) : '00:00';
+    const isToday = (formData.pickupDate === todayStr);
+    const minTime = (isToday ? now.toTimeString().slice(0, 5) : '00:00');
 
     // Price (fixed)
-    const price = canDoSameDay ? 15.99 : 12.99;
+    const price = isBefore9AM ? 15.99 : 12.99;
 
     return (
         <div className="min-h-screen p-4 bg-gray-100">
@@ -322,8 +320,8 @@ export default function Schedule() {
                                     required
                                 />
                             </div>
-                            {isSameDaySelected && !isBefore9AM && (
-                                <p className="mt-1 text-sm text-gray-600 md:col-span-2">
+                            {!isBefore9AM && (
+                                <p className="mt-2 text-sm text-yellow-600 md:col-span-2">
                                     Same-day delivery is only available for orders placed before 9:00 AM. This will be scheduled as next-day.
                                 </p>
                             )}
