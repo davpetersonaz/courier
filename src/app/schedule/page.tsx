@@ -78,27 +78,6 @@ export default function Schedule() {
         preventGoogleFontsLoading: true
     });
 
-    // Time/date restrictions
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const currentHour = now.getHours();
-    const isBefore9AM = currentHour < 9;
-
-    // Same-day only if date = today AND time < 9 AM
-    const isSameDaySelected = formData.pickupDate === todayStr;
-    const canDoSameDay = isBefore9AM && isSameDaySelected;
-    const deliveryType = canDoSameDay ? 'Same-Day' : 'Next-Day';
-
-    // Min date: today only if before 9 AM, otherwise tomorrow
-    const minDate = isBefore9AM ? todayStr : new Date(now.setDate(now.getDate() + 1)).toISOString().split('T')[0];
-
-    // Min time: on today, can't pick past current time
-    const isToday = formData.pickupDate === todayStr;
-    const minTime = isToday ? now.toTimeString().slice(0, 5) : '00:00';
-
-    // Price (fixed)
-    const price = canDoSameDay ? 15.99 : 12.99;
-
     useEffect(() => {
         const suppressBraveSuggestions = (input: HTMLInputElement | null) => {
             if (!input) return;
@@ -277,6 +256,27 @@ export default function Schedule() {
         setMapError(null);
     };
 
+    // Time/date restrictions
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const currentHour = now.getHours();
+    const isBefore9AM = currentHour < 9;
+
+    // Same-day only if date = today AND time < 9 AM
+    const isSameDaySelected = formData.pickupDate === todayStr;
+    const canDoSameDay = isBefore9AM && isSameDaySelected;
+    const deliveryType = canDoSameDay ? 'Same-Day' : 'Next-Day';
+
+    // Min date: today only if before 9 AM, otherwise tomorrow
+    const minDate = isBefore9AM ? todayStr : new Date(now.setDate(now.getDate() + 1)).toISOString().split('T')[0];
+
+    // Min time: on today, can't pick past current time
+    const isToday = formData.pickupDate === todayStr;
+    const minTime = isToday ? now.toTimeString().slice(0, 5) : '00:00';
+
+    // Price (fixed)
+    const price = canDoSameDay ? 15.99 : 12.99;
+
     return (
         <div className="min-h-screen p-4 bg-gray-100">
             <div className="max-w-4xl mx-auto">
@@ -301,6 +301,11 @@ export default function Schedule() {
                                     className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     required
                                 />
+                                {!isBefore9AM && (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Earliest available: {new Date(now.setDate(now.getDate() + 1)).toLocaleDateString()}
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="pickupTime" className="block text-sm font-medium text-gray-700 mb-1">
