@@ -72,6 +72,12 @@ export default function Schedule() {
     const pickupInputRef = useRef<HTMLInputElement>(null);
     const dropoffInputRef = useRef<HTMLInputElement>(null);
 
+    const { isLoaded, loadError } = useLoadScript({
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+        libraries: ['places'],
+        preventGoogleFontsLoading: true
+    });
+
     // Time/date restrictions
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -92,12 +98,6 @@ export default function Schedule() {
 
     // Price (fixed)
     const price = canDoSameDay ? 15.99 : 12.99;
-
-    const { isLoaded, loadError } = useLoadScript({
-        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-        libraries: ['places'],
-        preventGoogleFontsLoading: true
-    });
 
     useEffect(() => {
         const suppressBraveSuggestions = (input: HTMLInputElement | null) => {
@@ -318,7 +318,7 @@ export default function Schedule() {
                                 />
                             </div>
                             {isSameDaySelected && !isBefore9AM && (
-                                <p className="mt-1 text-sm text-gray-600">
+                                <p className="mt-1 text-sm text-gray-600 md:col-span-2">
                                     Same-day delivery is only available for orders placed before 9:00 AM. This will be scheduled as next-day.
                                 </p>
                             )}
