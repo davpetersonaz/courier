@@ -72,6 +72,27 @@ export default function Schedule() {
     const pickupInputRef = useRef<HTMLInputElement>(null);
     const dropoffInputRef = useRef<HTMLInputElement>(null);
 
+    // Time/date restrictions
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const currentHour = now.getHours();
+    const isBefore9AM = currentHour < 9;
+
+    // Same-day only if date = today AND time < 9 AM
+    const isSameDaySelected = formData.pickupDate === todayStr;
+    const canDoSameDay = isBefore9AM && isSameDaySelected;
+    const deliveryType = canDoSameDay ? 'Same-Day' : 'Next-Day';
+
+    // Min date: today only if before 9 AM, otherwise tomorrow
+    const minDate = isBefore9AM ? todayStr : new Date(now.setDate(now.getDate() + 1)).toISOString().split('T')[0];
+
+    // Min time: on today, can't pick past current time
+    const isToday = formData.pickupDate === todayStr;
+    const minTime = isToday ? now.toTimeString().slice(0, 5) : '00:00';
+
+    // Price (fixed)
+    const price = canDoSameDay ? 15.99 : 12.99;
+
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: GOOGLE_MAPS_API_KEY,
         libraries: ['places'],
@@ -256,16 +277,6 @@ export default function Schedule() {
         setMapError(null);
     };
 
-    // Determine if same-day is allowed (is before 9 AM)
-    const now = new Date();
-    const isBefore9AM = now.getHours() < 9;
-    const minDate = isBefore9AM ? now.toISOString().split('T')[0] : new Date(now.setDate(now.getDate() + 1)).toISOString().split('T')[0];
-
-    // Price logic (fixed $12.99)
-    const isSameDay = formData.pickupDate === new Date().toISOString().split('T')[0];
-    const price = 12.99;
-    const deliveryType = isSameDay ? 'Same-Day' : 'Next-Day';
-
     return (
         <div className="min-h-screen p-4 bg-gray-100">
             <div className="max-w-4xl mx-auto">
@@ -301,10 +312,16 @@ export default function Schedule() {
                                     type="time"
                                     value={formData.pickupTime}
                                     onChange={handleChange}
+                                    min={minTime}
                                     className="w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     required
                                 />
                             </div>
+                            {isSameDaySelected && !isBefore9AM && (
+                                <p className="mt-1 text-sm text-gray-600">
+                                    Same-day delivery is only available for orders placed before 9:00 AM. This will be scheduled as next-day.
+                                </p>
+                            )}
                             <div className="md:col-span-2 relative">
                                 <label htmlFor="pu-loc" className="block text-sm font-medium text-gray-700 mb-1">
                                     Pickup Address
