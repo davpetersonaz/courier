@@ -12,6 +12,7 @@
     "@prisma/client": "^6.17.1",
     "@react-google-maps/api": "^2.20.8",
     "bcrypt": "^6.0.0",
+    "framer-motion": "^12.29.2",
     "next": "15.5.9",
     "next-auth": "^5.0.0-beta.16",
     "react": "19.2.1",
@@ -39,4 +40,3 @@
     "react-dom": "19.2.1"
   }
 }
-

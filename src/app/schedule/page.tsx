@@ -321,7 +321,7 @@ export default function Schedule() {
                                 />
                             </div>
                             {!isBefore9AM && (
-                                <p className="mt-2 text-sm text-yellow-600 md:col-span-2">
+                                <p className="mt-2 text-sm text-yellow-600 md:col-span-2 text-center">
                                     Same-day delivery is only available for orders placed before 9:00 AM. This will be scheduled as next-day.
                                 </p>
                             )}
