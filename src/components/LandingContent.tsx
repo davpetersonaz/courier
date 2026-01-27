@@ -28,7 +28,7 @@ export default function LandingContent() {
                         fill
                         priority // Loads fast for above-the-fold
                         quality={85}
-                        className="object-cover brightness-[0.65] scale-105 transition-transform duration-700 hover:scale-110"
+                        className="object-cover brightness-[0.85] scale-105 transition-transform duration-700 hover:scale-110"
                         sizes="100vw"
                     />
                 </div>
