@@ -95,7 +95,7 @@ export default function LandingContent() {
                     </div>
                     <div className="relative h-96 rounded-xl overflow-hidden shadow-2xl">
                         <Image
-                            src="/images/CourierDropoff.jpg"
+                            src="/images/CourierHandoff.jpg"
                             alt="Our couriers in action"
                             fill
                             className="object-cover"
