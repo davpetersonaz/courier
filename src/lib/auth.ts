@@ -1,12 +1,41 @@
 // src/lib/auth.ts
-import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials"
-import prisma from "@/lib/db"
-import bcrypt from "bcrypt"
-import type { Session, User } from "next-auth";
-import type { JWT } from "next-auth/jwt";
+import NextAuth from "next-auth";
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import Credentials from "next-auth/providers/credentials";
+import prisma from "@/lib/db";
+import bcrypt from "bcrypt";
 
-const authOptions  = {
+// Import base types from next-auth (v5 re-exports them)
+import type { DefaultSession, User as BaseUser, Session as BaseSession } from "next-auth";
+import type { JWT as BaseJWT } from "next-auth/jwt";
+
+// Extend User type to include custom fields (v5 style)
+declare module "next-auth" {
+    interface User {
+        id: string;
+        username: string;
+        role: string;
+    }
+
+    interface Session {
+        user: {
+            id: string;
+            username: string;
+            role: string;
+        } & DefaultSession["user"];
+    }
+}
+
+declare module "next-auth/jwt" {
+    interface JWT {
+        id: string;
+        username: string;
+        role: string;
+    }
+}
+
+const authConfig = {
+    adapter: PrismaAdapter(prisma),
     providers: [
         Credentials({
             name: "Credentials",
@@ -14,7 +43,7 @@ const authOptions  = {
                 username: { label: "Username", type: "text" },
                 password: { label: "Password", type: "password" },
             },
-            async authorize(credentials, ) {//'request', the 2nd param, is unused, so omitted here.
+            async authorize(credentials: any) {
                 if (!credentials?.username || !credentials?.password){ return null }
 
                 const user = await prisma.user.findUnique({
@@ -43,7 +72,7 @@ const authOptions  = {
         }),
     ],
     pages: { signIn: "/" },
-    session: { 
+    session: {
         strategy: "jwt" as const,
         maxAge: 12 * 60 * 60, // 12 hours in seconds
     },
@@ -51,7 +80,8 @@ const authOptions  = {
         maxAge: 12 * 60 * 60, // must match
     },
     callbacks: {
-        jwt({ token, user }: { token: JWT; user?: User | null }) {
+        jwt(params: { token: import("next-auth/jwt").JWT; user?: import("next-auth").User | null }) {
+            const { token, user } = params;
             if (user) {
                 token.id = user.id;
                 token.username = user.username;
@@ -59,14 +89,14 @@ const authOptions  = {
             }
             return token;
         },
-        session({ session, token }: { session: Session; token: JWT }) {
-            if (token.id){ session.user.id = token.id; }
-            if (token.username){ session.user.username = token.username; }
-            if (token.role){ session.user.role = token.role; }
+        session(params: { session: import("next-auth").Session; token: import("next-auth/jwt").JWT }) {
+            const { session, token } = params;
+            if (token?.id){ session.user.id = token.id as string; }
+            if (token?.username){ session.user.username = token.username as string; }
+            if (token?.role){ session.user.role = token.role as string; }
             return session;
         },
     },
 };
 
-const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
-export { handlers, auth, signIn, signOut, authOptions };
+export const { handlers, signIn, signOut, auth } = NextAuth(authConfig);

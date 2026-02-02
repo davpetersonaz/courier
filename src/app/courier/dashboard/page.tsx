@@ -174,7 +174,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y">
-                                            {inProgressOrders.map((order) => (
+                                            {inProgressOrders.map((order: any) => (
                                                 <tr key={order.id} className="hover:bg-gray-50">
                                                     <td className="px-4 py-4 font-medium">#{order.id}</td>
                                                     <td className="px-4 py-4">

@@ -2,6 +2,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLoadScript } from '@react-google-maps/api';
 import Link from 'next/link';
 
 export default function Register() {
@@ -17,6 +18,13 @@ export default function Register() {
     const [zip, setZip] = useState('');
     const [phone, setPhone] = useState('');
     const router = useRouter();
+
+    const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+    const { isLoaded, loadError } = useLoadScript({
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+        libraries: ['places'],
+    });
+    console.log('Maps loaded:', isLoaded, 'Error:', loadError);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -55,6 +63,8 @@ export default function Register() {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
+            {loadError && <p className="text-red-600">Google Maps failed to load: {loadError.message}</p>}
+            {!isLoaded && !loadError && <p>Loading Google Maps...</p>}
             <div className="w-full max-w-md">
                 <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">
                     Register

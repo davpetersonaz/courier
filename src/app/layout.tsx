@@ -1,6 +1,5 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "../styles/global.css";
 import Navbar from '@/components/Navbar';
 import SessionProviderWrapper from '@/components/SessionProviderWrapper';
@@ -9,16 +8,6 @@ import SessionTimeout from '@/components/SessionTimeout';
 import Script from 'next/script';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
-const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
-    subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
     title: "Courier Service",
@@ -30,11 +19,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <html lang="en">
             <head>
                 <Script
-                    src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`}
+                    src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&v=weekly&loading=async`}
                     strategy="beforeInteractive"
+                    async
+                    defer
                 />
             </head>
-            <body className={`${geistSans.variable} ${geistMono.variable}`}>
+            <body>
                 <SessionProviderWrapper>
                     <Navbar />
                     {children}
