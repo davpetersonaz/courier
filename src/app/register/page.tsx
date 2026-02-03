@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Autocomplete } from '@react-google-maps/api';
 import Link from 'next/link';
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
 export default function Register() {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');

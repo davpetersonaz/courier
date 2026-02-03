@@ -259,7 +259,7 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                             </GoogleMap>
                         </div>
                     ) : selected.length > 0 ? (
-                        <p className="text-center text-gray-600 py-4">Click "Generate Optimized Route" to see preview</p>
+                        <p className="text-center text-gray-600 py-4">Click &quot;Generate Optimized Route&quot; to see preview</p>
                     ) : null}
                 </>
             )}
