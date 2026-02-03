@@ -24,7 +24,9 @@ export default function Register() {
         googleMapsApiKey: GOOGLE_MAPS_API_KEY,
         libraries: ['places'],
     });
-    console.log('Maps loaded:', isLoaded, 'Error:', loadError);
+    if(typeof window !== 'undefined'){
+        console.log('Maps loaded:', isLoaded, ', Error:', loadError);
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
