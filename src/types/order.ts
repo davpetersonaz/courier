@@ -27,7 +27,10 @@ export type OrderWithCustomer = {
         lastName: string | null;
         phone: string;
     };
+    pickupDate: Date;
+    pickupTime: string;
     pickupAddress: string;
     dropoffAddress: string;
-    // add other fields you use in the table
+    totalPieces: number;
+    orderWeight: number;
 };

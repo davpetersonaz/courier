@@ -61,7 +61,6 @@ export default function Schedule() {
     const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [dropoffCoords, setDropoffCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-    const [mapError, setMapError] = useState<string | null>(null);
     const [pickupVerified, setPickupVerified] = useState<string | null>(null);
     const [dropoffVerified, setDropoffVerified] = useState<string | null>(null);
     const pickupAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -116,7 +115,6 @@ export default function Schedule() {
     useEffect(() => {
         if (!pickupCoords || !dropoffCoords) {
             setDirections(null);
-            setMapError(null);
             return;
         }
 
@@ -130,10 +128,9 @@ export default function Schedule() {
             (result, status) => {
                 if (status === google.maps.DirectionsStatus.OK && result) {
                     setDirections(result);
-                    setMapError(null);
                 } else {
                     setDirections(null);
-                    setMapError('Could not calculate route: ' + status);
+                    console.warn('Route calculation failed:', status);
                 }
             }
         );
@@ -244,7 +241,6 @@ export default function Schedule() {
         setDirections(null);
         setPickupVerified(null);
         setDropoffVerified(null);
-        setMapError(null);
     };
 
     // Time/date restrictions

@@ -2,6 +2,8 @@
 'use client';
 import { useState } from 'react';
 import { GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
+import { OrderWithCustomer } from '@/types/order';
+import { OrderStatus } from '@/lib/order-status';
 
 interface AvailablePickupsProps {
     orders: Array<{
@@ -13,14 +15,10 @@ interface AvailablePickupsProps {
         dropoffAddress: string;
         totalPieces: number;
         orderWeight: number;
+        status: OrderStatus;
     }>;
     courierAddress: string;
 }
-
-const mapContainerStyle = {
-    width: '100%',
-    height: '400px',
-};
 
 export default function AvailablePickups({ orders, courierAddress }: AvailablePickupsProps) {
     const [selected, setSelected] = useState<number[]>([]);
@@ -148,8 +146,9 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                 .join('|');
             const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(courierAddress)}&destination=${encodeURIComponent(dropoffs[dropoffs.length - 1])}&waypoints=${waypointsParam}&travelmode=driving&optimize=true`;
             window.open(url, '_blank');
-        } catch (err: any) {
-            alert(`Route generation failed: ${err.message || err}`);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            alert(`Route generation failed: ${message}`);
         } finally {
             setIsGenerating(false);
         }
@@ -178,7 +177,7 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {orders.map(order => (
+                                {orders.map((order: OrderWithCustomer) => (
                                     <tr key={order.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-4 text-center">
                                             <input
