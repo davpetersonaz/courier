@@ -1,9 +1,11 @@
 // src/app/register/page.tsx
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLoadScript } from '@react-google-maps/api';
+import { Autocomplete } from '@react-google-maps/api';
 import Link from 'next/link';
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 export default function Register() {
     const [username, setUsername] = useState('');
@@ -19,19 +21,18 @@ export default function Register() {
     const [phone, setPhone] = useState('');
     const router = useRouter();
 
-    const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-    const { isLoaded, loadError } = useLoadScript({
-        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-        libraries: ['places'],
-    });
-    if(typeof window !== 'undefined'){
-        console.log('Maps loaded:', isLoaded, ', Error:', loadError);
-    }
+    const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+    const addressInputRef = useRef<HTMLInputElement>(null);
+    const [addressVerified, setAddressVerified] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (password !== confirmPassword) {
             alert('Passwords do not match. Please try again.');
+            return;
+        }
+        if (!addressVerified) {
+            alert('Please verify the address with Google Places.');
             return;
         }
         try {
@@ -48,15 +49,8 @@ export default function Register() {
                     router.push('/'); // or '/login' if you make one
                 }
             } else {
-                let error = 'Registration failed';
-                try {
-                    const data = await res.json();
-                    error = data.error || error;
-                } catch {
-                    // If not JSON, use status text
-                    error = res.statusText || error;
-                }
-                alert(error);
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'Registration failed');
             }
         } catch (err) {
             alert('Registration failed: ' + String(err));
@@ -65,8 +59,6 @@ export default function Register() {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-            {loadError && <p className="text-red-600">Google Maps failed to load: {loadError.message}</p>}
-            {!isLoaded && !loadError && <p>Loading Google Maps...</p>}
             <div className="w-full max-w-md">
                 <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">
                     Register
@@ -156,19 +148,57 @@ export default function Register() {
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
-                        <div className="flex flex-col">
+                        <div className="flex flex-col relative">
                             <label htmlFor="address" className="text-sm font-medium text-gray-700 mb-1">
                                 Address (Street)
                             </label>
-                            <input
-                                id="address"
-                                type="text"
-                                value={address}
-                                onChange={e => setAddress(e.target.value)}
-                                placeholder="Street Address"
-                                className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                required
-                            />
+                            <Autocomplete
+                                onLoad={(autocomplete) => {
+                                    autocompleteRef.current = autocomplete;
+                                }}
+                                onPlaceChanged={() => {
+                                    const place = autocompleteRef.current?.getPlace();
+                                    if (place?.formatted_address) {
+                                        addressInputRef.current!.value = place.formatted_address;
+                                        setAddress(place.formatted_address);
+                                        setAddressVerified(place.formatted_address);
+                                        if (place?.address_components) {
+                                            let newCity = '', newState = '', newZip = '';
+                                            place.address_components.forEach(comp => {
+                                                if (comp.types.includes('locality')) newCity = comp.long_name;
+                                                if (comp.types.includes('administrative_area_level_1')) newState = comp.short_name;
+                                                if (comp.types.includes('postal_code')) newZip = comp.long_name;
+                                            });
+                                            setCity(newCity);
+                                            setState(newState);
+                                            setZip(newZip);
+                                        }
+                                    }
+                                }}
+                                options={{
+                                    types: ['address'],
+                                    componentRestrictions: { country: 'us' },
+                                }}
+                            >
+                                <input
+                                    ref={addressInputRef}
+                                    id="address"
+                                    type="text"
+                                    value={address}
+                                    onChange={(e) => setAddress(e.target.value)}
+                                    placeholder="Start typing your address..."
+                                    className={`mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500 ${
+                                        addressVerified ? 'border-green-500 bg-green-50' : ''
+                                    }`}
+                                    required
+                                />
+                            </Autocomplete>
+                            {addressVerified && (
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
+                                    <span className="text-base leading-none">✓</span>
+                                    <span>Verified</span>
+                                </span>
+                            )}
                         </div>
                         <div className="flex flex-col">
                             <label htmlFor="city" className="text-sm font-medium text-gray-700 mb-1">

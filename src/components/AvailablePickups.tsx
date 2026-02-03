@@ -1,7 +1,7 @@
 // src/components/AvailablePickups.tsx
 'use client';
 import { useState } from 'react';
-import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 
 interface AvailablePickupsProps {
     orders: Array<{
@@ -17,16 +17,16 @@ interface AvailablePickupsProps {
     courierAddress: string;
 }
 
+const mapContainerStyle = {
+    width: '100%',
+    height: '400px',
+};
+
 export default function AvailablePickups({ orders, courierAddress }: AvailablePickupsProps) {
     const [selected, setSelected] = useState<number[]>([]);
     const [optimizedSequence, setOptimizedSequence] = useState<string[]>([]);
     const [optimizedRoute, setOptimizedRoute] = useState<google.maps.DirectionsResult | null>(null);
-
-    const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-    const { isLoaded, loadError } = useLoadScript({
-        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-        libraries: ['places']
-    });
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const toggleSelect = (id: number) => {
         setSelected(prev =>
@@ -53,69 +53,106 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
         }
     };
 
-    const generateRoute = () => {
+    const generateRoute = async () => {
         if (selected.length === 0) return;
+        setIsGenerating(true);
 
-        // Collect pickups and dropoffs separately
-        const pickups = selected
-            .map(id => orders.find(o => o.id === id)?.pickupAddress)
-            .filter((addr): addr is string => !!addr);
-
-        const dropoffs = selected
-            .map(id => orders.find(o => o.id === id)?.dropoffAddress)
-            .filter((addr): addr is string => !!addr);
-
-        if (pickups.length === 0 || dropoffs.length === 0) {
-            alert('Missing pickup or dropoff addresses for selected orders');
-            return;
-        }
-
-        // Use Directions API for optimization
-        const directionsService = new google.maps.DirectionsService();
-        directionsService.route(
-            {
-                origin: courierAddress,
-                destination: dropoffs[dropoffs.length - 1], // last dropoff as final stop
-                waypoints: [
-                    // Optimize pickups among themselves (all but last)
-                    ...pickups.slice(0, -1).map(location => ({ location, stopover: true })),
-                    // Optimize dropoffs among themselves (all but last)
-                    ...dropoffs.slice(0, -1).map(location => ({ location, stopover: true })),
-                ],
-                optimizeWaypoints: true,
-                travelMode: google.maps.TravelMode.DRIVING,
-                drivingOptions: {
-                    departureTime: new Date(), // current time for traffic
-                    trafficModel: 'pessimistic' as google.maps.TrafficModel,
-                },
-            },
-            (result, status) => {
-                if (status === google.maps.DirectionsStatus.OK && result) {
-                    // Extract the optimized sequence for display
-                    const orderedWaypoints = result.routes[0].waypoint_order.map(i => {
-                        const allWaypoints = [...pickups.slice(0, -1), ...dropoffs.slice(0, -1)];
-                        return allWaypoints[i];
-                    });
-
-                    const fullSequence = [
-                        courierAddress,                        // Start
-                        ...pickups.slice(0, -1),               // Optimized pickups (except last)
-                        pickups[pickups.length - 1],           // Last pickup (fixed before dropoffs)
-                        ...orderedWaypoints.filter(a => dropoffs.slice(0, -1).includes(a)), // Optimized dropoffs
-                        dropoffs[dropoffs.length - 1],         // Final stop
-                    ].filter(Boolean);
-                    setOptimizedSequence(fullSequence);
-                    setOptimizedRoute(result);
-
-                    // Open Google Maps with the same optimized order
-                    const waypointsParam = orderedWaypoints.map(encodeURIComponent).join('|');
-                    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(courierAddress)}&destination=${encodeURIComponent(dropoffs[dropoffs.length - 1])}&waypoints=${waypointsParam}&travelmode=driving&optimize=true`;
-                    window.open(url, '_blank');
-                } else {
-                    alert(`Could not generate route: ${status}`);
-                }
+        try{
+            // Collect pickups and dropoffs separately
+            const selectedOrders = selected
+                .map(id => orders.find(o => o.id === id))
+                .filter((o): o is NonNullable<typeof o> => !!o);
+            const pickups = selectedOrders.map(o => o.pickupAddress).filter(Boolean);
+            const dropoffs = selectedOrders.map(o => o.dropoffAddress).filter(Boolean);
+            if (pickups.length === 0 || dropoffs.length === 0) {
+                alert('Missing pickup or dropoff addresses for selected orders');
+                return;
             }
-        );
+
+            // Use Directions API for optimization
+            const directionsService = new google.maps.DirectionsService();
+
+            // Step 1: Optimize pickups (courier → all pickups → first dropoff anchor)
+            const pickupResponse = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
+                directionsService.route(
+                    {
+                        origin: courierAddress,
+                        destination: dropoffs[0],
+                        waypoints: pickups.map(loc => ({ location: loc, stopover: true })),
+                        optimizeWaypoints: true,
+                        travelMode: google.maps.TravelMode.DRIVING,
+                        drivingOptions: {
+                            departureTime: new Date(),
+                            trafficModel: 'pessimistic' as google.maps.TrafficModel,
+                        },
+                    },
+                    (result, status) => (status === google.maps.DirectionsStatus.OK && result ? resolve(result) : reject(status))
+                );
+            });
+            const optimizedPickupOrder = pickupResponse.routes[0].waypoint_order.map(i => pickups[i]);
+
+            // Step 2: Optimize dropoffs (last pickup → all dropoffs)
+            const dropoffResponse = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
+                directionsService.route(
+                    {
+                        origin: optimizedPickupOrder[optimizedPickupOrder.length - 1] || courierAddress,
+                        destination: dropoffs[dropoffs.length - 1],
+                        waypoints: dropoffs.slice(0, -1).map(loc => ({ location: loc, stopover: true })),
+                        optimizeWaypoints: true,
+                        travelMode: google.maps.TravelMode.DRIVING,
+                        drivingOptions: {
+                            departureTime: new Date(),
+                            trafficModel: 'pessimistic' as google.maps.TrafficModel,
+                        },
+                    },
+                    (result, status) => (status === google.maps.DirectionsStatus.OK && result ? resolve(result) : reject(status))
+                );
+            });
+            const optimizedDropoffOrder = dropoffResponse.routes[0].waypoint_order.map(i => dropoffs.slice(0, -1)[i]);
+
+            // Build full sequence
+            const fullSequence = [
+                courierAddress,
+                ...optimizedPickupOrder,
+                ...optimizedDropoffOrder,
+                dropoffs[dropoffs.length - 1],
+            ].filter(Boolean);
+            setOptimizedSequence(fullSequence);
+
+            // Combine into one DirectionsResult for rendering
+            const combinedRoute: google.maps.DirectionsResult = {
+                ...pickupResponse, // keep everything from pickup (request, status, etc.)
+                routes: [{
+                    ...pickupResponse.routes[0],
+                    legs: [
+                        ...pickupResponse.routes[0].legs,
+                        ...dropoffResponse.routes[0].legs,
+                    ],
+                    // Keep pickup's waypoint_order (dropoffs are appended after, so no need to merge orders)
+                    waypoint_order: pickupResponse.routes[0].waypoint_order,
+                    // Add other required props if TS complains (rare)
+                    bounds: pickupResponse.routes[0].bounds || dropoffResponse.routes[0].bounds,
+                    copyrights: pickupResponse.routes[0].copyrights,
+                    overview_path: pickupResponse.routes[0].overview_path,
+                    overview_polyline: pickupResponse.routes[0].overview_polyline,
+                    summary: pickupResponse.routes[0].summary,
+                    warnings: pickupResponse.routes[0].warnings,
+                }],
+            };
+            setOptimizedRoute(combinedRoute);
+
+            // Open Google Maps link with optimized order
+            const waypointsParam = fullSequence
+                .slice(1, -1) // exclude start/end
+                .map(encodeURIComponent)
+                .join('|');
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(courierAddress)}&destination=${encodeURIComponent(dropoffs[dropoffs.length - 1])}&waypoints=${waypointsParam}&travelmode=driving&optimize=true`;
+            window.open(url, '_blank');
+        } catch (err: any) {
+            alert(`Route generation failed: ${err.message || err}`);
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     return (
@@ -170,7 +207,7 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                                             {order.totalPieces} pcs • {order.orderWeight} lbs
                                         </td>
                                         <td className="px-4 py-4 text-center">
-                                            <button 
+                                            <button
                                                 onClick={() => acceptJob(order.id)}
                                                 className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
                                             >
@@ -187,10 +224,10 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                     <div className="p-4 bg-gray-50 border-t flex justify-end">
                         <button
                             onClick={generateRoute}
-                            disabled={selected.length === 0}
+                            disabled={selected.length === 0 || isGenerating}
                             className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Generate Optimized Route ({selected.length} selected)
+                            {isGenerating ? 'Generating Route...' : `Generate Optimized Route (${selected.length} selected)`}
                         </button>
                     </div>
 
@@ -211,20 +248,18 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                     )}
 
                     {/* Embedded Map */}
-                    {isLoaded ? (
-                        optimizedRoute ? (
-                            <div className="mt-6 border rounded-lg overflow-hidden" style={{ height: '400px' }}>
-                                <GoogleMap
-                                    mapContainerStyle={{ width: '100%', height: '100%' }}
-                                    center={{ lat: 33.4484, lng: -112.0740 }} // Phoenix fallback
-                                    zoom={11}
-                                >
-                                    <DirectionsRenderer directions={optimizedRoute} />
-                                </GoogleMap>
-                            </div>
-                        ) : null
-                    ) : loadError ? (
-                        <p className="p-4 text-red-600">Failed to load Google Maps: {loadError.message}</p>
+                    {optimizedRoute ? (
+                        <div className="mt-6 border rounded-lg overflow-hidden" style={{ height: '400px' }}>
+                            <GoogleMap
+                                mapContainerStyle={{ width: '100%', height: '100%' }}
+                                center={{ lat: 33.4484, lng: -112.0740 }}
+                                zoom={11}
+                            >
+                                <DirectionsRenderer directions={optimizedRoute} />
+                            </GoogleMap>
+                        </div>
+                    ) : selected.length > 0 ? (
+                        <p className="text-center text-gray-600 py-4">Click "Generate Optimized Route" to see preview</p>
                     ) : null}
                 </>
             )}

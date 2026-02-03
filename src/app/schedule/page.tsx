@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
-import { useLoadScript } from '@react-google-maps/api';
 import { Autocomplete } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -71,12 +70,6 @@ export default function Schedule() {
     const dropoffAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
     const pickupInputRef = useRef<HTMLInputElement>(null);
     const dropoffInputRef = useRef<HTMLInputElement>(null);
-
-    const { isLoaded, loadError } = useLoadScript({
-        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-        libraries: ['places'],
-        preventGoogleFontsLoading: true
-    });
 
     useEffect(() => {
         const suppressBraveSuggestions = (input: HTMLInputElement | null) => {
@@ -275,6 +268,15 @@ export default function Schedule() {
     // Price (fixed)
     const price = isBefore9AM ? 15.99 : 12.99;
 
+    // Early return if Maps isn't ready
+    if (typeof window !== 'undefined' && !window.google?.maps?.places) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-yellow-600 text-xl">Google Places is still loading... Please wait a moment.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen p-4 bg-gray-100">
             <div className="max-w-4xl mx-auto">
@@ -329,66 +331,52 @@ export default function Schedule() {
                                 <label htmlFor="pu-loc" className="block text-sm font-medium text-gray-700 mb-1">
                                     Pickup Address
                                 </label>
-                                {isLoaded ? (
-                                    <Autocomplete
-                                        onLoad={(autocomplete) => {
-                                            pickupAutocompleteRef.current = autocomplete;
-                                        }}
-                                        onPlaceChanged={() => {
-                                            const input = pickupInputRef.current;
-                                            if (input) {
-                                                const place = pickupAutocompleteRef.current?.getPlace();
-                                                if (place?.formatted_address && place.geometry?.location) {
-                                                    input.value = place.formatted_address; // direct DOM set
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        pickupAddress: place.formatted_address!,  // ! tells TS it's definitely string
-                                                    }));
-                                                    setPickupCoords({
-                                                        lat: place.geometry.location.lat(),
-                                                        lng: place.geometry.location.lng(),
-                                                    });
-                                                    setPickupVerified(place.formatted_address);
-                                                }
+                                <Autocomplete
+                                    onLoad={(autocomplete) => {
+                                        pickupAutocompleteRef.current = autocomplete;
+                                    }}
+                                    onPlaceChanged={() => {
+                                        const input = pickupInputRef.current;
+                                        if (input) {
+                                            const place = pickupAutocompleteRef.current?.getPlace();
+                                            if (place?.formatted_address && place.geometry?.location) {
+                                                input.value = place.formatted_address; // direct DOM set
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    pickupAddress: place.formatted_address!,  // ! tells TS it's definitely string
+                                                }));
+                                                setPickupCoords({
+                                                    lat: place.geometry.location.lat(),
+                                                    lng: place.geometry.location.lng(),
+                                                });
+                                                setPickupVerified(place.formatted_address);
                                             }
-                                        }}
-                                        options={{
-                                            types: ['address'], // restrict to full addresses
-                                            componentRestrictions: { country: 'us' }, // optional: US only
-                                        }}
-                                    >
-                                        <input
-                                            id="pu-loc"
-                                            name="pu-loc-field"
-                                            ref={pickupInputRef}
-                                            type="text"
-                                            defaultValue={formData.pickupAddress}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
-                                            onBlur={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
-                                            placeholder="Start typing the pickup location..."
-                                            autoComplete="off new-password"
-                                            autoCorrect="off"                     // macOS/iOS
-                                            spellCheck="false"                    // extra layer
-                                            data-brave-ignore-autofill="true"
-                                            className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
-                                                pickupVerified ? 'border-green-500 bg-green-50' : ''
-                                            }`}
-                                            required
-                                        />
-                                    </Autocomplete>
-                                ) : (
+                                        }
+                                    }}
+                                    options={{
+                                        types: ['address'], // restrict to full addresses
+                                        componentRestrictions: { country: 'us' }, // optional: US only
+                                    }}
+                                >
                                     <input
-                                        // fallback plain input while loading
                                         id="pu-loc"
                                         name="pu-loc-field"
+                                        ref={pickupInputRef}
                                         type="text"
-                                        value={formData.pickupAddress}
-                                        onChange={handleChange}
-                                        placeholder="Loading autocomplete..."
-                                        className="w-full border-2 border-gray-300 p-2 rounded-md"
-                                        disabled
+                                        defaultValue={formData.pickupAddress}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
+                                        onBlur={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
+                                        placeholder="Start typing the pickup location..."
+                                        autoComplete="off new-password"
+                                        autoCorrect="off"                     // macOS/iOS
+                                        spellCheck="false"                    // extra layer
+                                        data-brave-ignore-autofill="true"
+                                        className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
+                                            pickupVerified ? 'border-green-500 bg-green-50' : ''
+                                        }`}
+                                        required
                                     />
-                                )}
+                                </Autocomplete>
                                 {pickupVerified && (
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
                                         <span className="text-base leading-none">✓</span>
@@ -513,65 +501,52 @@ export default function Schedule() {
                                 <label htmlFor="do-loc" className="block text-sm font-medium text-gray-700 mb-1">
                                     Dropoff Address
                                 </label>
-                                {isLoaded ? (
-                                    <Autocomplete
-                                        onLoad={(autocomplete) => {
-                                            dropoffAutocompleteRef.current = autocomplete;
-                                        }}
-                                        onPlaceChanged={() => {
-                                            const input = dropoffInputRef.current;
-                                            if (input) {
-                                                const place = dropoffAutocompleteRef.current?.getPlace();
-                                                if (place?.formatted_address && place.geometry?.location) {
-                                                    input.value = place.formatted_address; // direct DOM set
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        dropoffAddress: place.formatted_address!,  // ! tells TS it's definitely string
-                                                    }));
-                                                    setDropoffCoords({
-                                                        lat: place.geometry.location.lat(),
-                                                        lng: place.geometry.location.lng(),
-                                                    });
-                                                    setDropoffVerified(place.formatted_address);
-                                                }
+                                <Autocomplete
+                                    onLoad={(autocomplete) => {
+                                        dropoffAutocompleteRef.current = autocomplete;
+                                    }}
+                                    onPlaceChanged={() => {
+                                        const input = dropoffInputRef.current;
+                                        if (input) {
+                                            const place = dropoffAutocompleteRef.current?.getPlace();
+                                            if (place?.formatted_address && place.geometry?.location) {
+                                                input.value = place.formatted_address; // direct DOM set
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    dropoffAddress: place.formatted_address!,  // ! tells TS it's definitely string
+                                                }));
+                                                setDropoffCoords({
+                                                    lat: place.geometry.location.lat(),
+                                                    lng: place.geometry.location.lng(),
+                                                });
+                                                setDropoffVerified(place.formatted_address);
                                             }
-                                        }}
-                                        options={{
-                                            types: ['address'],
-                                            componentRestrictions: { country: 'us' },
-                                        }}
-                                    >
-                                        <input
-                                            id="do-loc"
-                                            name="do-loc-field"
-                                            ref={dropoffInputRef}
-                                            type="text"
-                                            defaultValue={formData.dropoffAddress}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
-                                            onBlur={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
-                                            placeholder="Start typing the dropoff location..."
-                                            autoComplete="off new-password"
-                                            autoCorrect="off"                     // macOS/iOS
-                                            spellCheck="false"                    // extra layer
-                                            data-brave-ignore-autofill="true"
-                                            className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
-                                                dropoffVerified ? 'border-green-500 bg-green-50' : ''
-                                            }`}
-                                            required
-                                        />
-                                    </Autocomplete>
-                                ) : (
+                                        }
+                                    }}
+                                    options={{
+                                        types: ['address'],
+                                        componentRestrictions: { country: 'us' },
+                                    }}
+                                >
                                     <input
                                         id="do-loc"
                                         name="do-loc-field"
+                                        ref={dropoffInputRef}
                                         type="text"
-                                        value={formData.dropoffAddress}
-                                        onChange={handleChange}
-                                        placeholder="Loading autocomplete..."
-                                        className="w-full border-2 border-gray-300 p-2 rounded-md"
-                                        disabled
+                                        defaultValue={formData.dropoffAddress}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
+                                        onBlur={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
+                                        placeholder="Start typing the dropoff location..."
+                                        autoComplete="off new-password"
+                                        autoCorrect="off"                     // macOS/iOS
+                                        spellCheck="false"                    // extra layer
+                                        data-brave-ignore-autofill="true"
+                                        className={`w-full border-2 border-gray-300 p-2 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-24 ${
+                                            dropoffVerified ? 'border-green-500 bg-green-50' : ''
+                                        }`}
+                                        required
                                     />
-                                )}
+                                </Autocomplete>
                                 {dropoffVerified && (
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-300 shadow-sm">
                                         <span className="text-base leading-none">✓</span>
@@ -648,24 +623,21 @@ export default function Schedule() {
                     )}
 
                     {/* Map Preview */}
-                    {(pickupCoords || dropoffCoords) && (
+                    {(pickupCoords || dropoffCoords) && window.google?.maps ? (
                         <div className="border border-gray-300 p-6 rounded-md">
                             <h2 className="text-2xl font-semibold mb-4">Route Preview</h2>
-                            {loadError && <p className="text-red-600 mb-2">Failed to load Google Maps: {loadError.message}</p>}
-                            {mapError && <p className="text-red-600 mb-2">{mapError}</p>}
-                            {!isLoaded && <p className="text-gray-500">Loading map...</p>}
-                            {isLoaded && (
-                                <GoogleMap
-                                    mapContainerStyle={mapContainerStyle}
-                                    center={pickupCoords || dropoffCoords || { lat: 33.4484, lng: -112.0740 }}
-                                    zoom={pickupCoords && dropoffCoords ? 11 : 12}
-                                >
-                                    {pickupCoords && <Marker position={pickupCoords} label="Pickup" />}
-                                    {dropoffCoords && <Marker position={dropoffCoords} label="Dropoff" />}
-                                    {directions && <DirectionsRenderer directions={directions} />}
-                                </GoogleMap>
-                            )}
+                            <GoogleMap
+                                mapContainerStyle={mapContainerStyle}
+                                center={pickupCoords || dropoffCoords || { lat: 33.4484, lng: -112.0740 }}
+                                zoom={pickupCoords && dropoffCoords ? 11 : 12}
+                            >
+                                {pickupCoords && <Marker position={pickupCoords} label="Pickup" />}
+                                {dropoffCoords && <Marker position={dropoffCoords} label="Dropoff" />}
+                                {directions && <DirectionsRenderer directions={directions} />}
+                            </GoogleMap>
                         </div>
+                    ) : (
+                        <p className="text-gray-500">Map preview loading...</p>
                     )}
 
                     {/* Save Recipient Checkbox */}
