@@ -6,7 +6,9 @@ import prisma from "@/lib/db";
 import bcrypt from "bcrypt";
 
 // Import base types from next-auth (v5 re-exports them)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { DefaultSession, User as BaseUser, Session as BaseSession } from "next-auth";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { JWT as BaseJWT } from "next-auth/jwt";
 
 // Extend User type to include custom fields (v5 style)
@@ -43,7 +45,7 @@ const authConfig = {
                 username: { label: "Username", type: "text" },
                 password: { label: "Password", type: "password" },
             },
-            async authorize(credentials: any) {
+            async authorize(credentials: Partial<Record<"username" | "password", unknown>> | null) {
                 if (!credentials?.username || !credentials?.password){ return null }
 
                 const user = await prisma.user.findUnique({

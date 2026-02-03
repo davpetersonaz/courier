@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import AvailablePickups from '@/components/AvailablePickups';
+import { OrderWithCustomer } from '@/types/order';
 
 async function updateOrderStatus(orderId: number, newStatus: OrderStatus) {
     'use server';
@@ -174,7 +175,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y">
-                                            {inProgressOrders.map((order: any) => (
+                                            {inProgressOrders.map((order: OrderWithCustomer) => (
                                                 <tr key={order.id} className="hover:bg-gray-50">
                                                     <td className="px-4 py-4 font-medium">#{order.id}</td>
                                                     <td className="px-4 py-4">
