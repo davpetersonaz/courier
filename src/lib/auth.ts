@@ -5,37 +5,6 @@ import Credentials from "next-auth/providers/credentials";
 import prisma from "@/lib/db";
 import bcrypt from "bcrypt";
 
-// Import base types from next-auth (v5 re-exports them)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { DefaultSession, User as BaseUser, Session as BaseSession } from "next-auth";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { JWT as BaseJWT } from "next-auth/jwt";
-
-// Extend User type to include custom fields (v5 style)
-declare module "next-auth" {
-    interface User {
-        id: string;
-        username: string;
-        role: string;
-    }
-
-    interface Session {
-        user: {
-            id: string;
-            username: string;
-            role: string;
-        } & DefaultSession["user"];
-    }
-}
-
-declare module "next-auth/jwt" {
-    interface JWT {
-        id: string;
-        username: string;
-        role: string;
-    }
-}
-
 const authConfig = {
     adapter: PrismaAdapter(prisma),
     providers: [
@@ -45,7 +14,7 @@ const authConfig = {
                 username: { label: "Username", type: "text" },
                 password: { label: "Password", type: "password" },
             },
-            async authorize(credentials: Partial<Record<"username" | "password", unknown>> | null) {
+            async authorize(credentials) {
                 if (!credentials?.username || !credentials?.password){ return null }
 
                 const user = await prisma.user.findUnique({
@@ -65,10 +34,11 @@ const authConfig = {
 
                 return {
                     id: user.id.toString(),
-                    name: user.firstName,
-                    email: user.email,
                     username: user.username,
-                    role: user.role
+                    role: user.role,
+                    firstName: user.firstName,
+                    email: user.email,
+                    name: user.firstName,
                 }
             },
         }),
@@ -88,6 +58,9 @@ const authConfig = {
                 token.id = user.id;
                 token.username = user.username;
                 token.role = user.role;
+                token.firstName = user.firstName;
+                token.email = user.email;
+                token.name = user.name;
             }
             return token;
         },
@@ -95,7 +68,10 @@ const authConfig = {
             const { session, token } = params;
             if (token?.id){ session.user.id = token.id as string; }
             if (token?.username){ session.user.username = token.username as string; }
-            if (token?.role){ session.user.role = token.role as string; }
+            if (token?.role){ session.user.role = token.role; }
+            if (token?.firstName) session.user.firstName = token.firstName as string;
+            if (token?.email) session.user.email = token.email as string;
+            if (token?.name) session.user.name = token.name as string;
             return session;
         },
     },

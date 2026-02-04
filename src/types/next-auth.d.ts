@@ -10,6 +10,8 @@ declare module "next-auth" {
             username: string
             role: 'CUSTOMER' | 'COURIER';
             firstName: string;
+            email: string;
+            name?: string;
         } & DefaultSession['user'];
     }
 
@@ -18,6 +20,8 @@ declare module "next-auth" {
         username: string
         role: "CUSTOMER" | "COURIER";
         firstName: string;
+        email: string;
+        name?: string;
     }
 }
 
@@ -28,5 +32,7 @@ declare module "next-auth/jwt" {
         username: string;
         role: "CUSTOMER" | "COURIER";
         firstName: string;
+        email: string;
+        name?: string;
     }
 }
