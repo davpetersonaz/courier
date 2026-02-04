@@ -27,7 +27,7 @@ export default function LandingContent() {
     if (status === 'loading') {
         return null; // or a minimal spinner if preferred
     }
-    const isLoggedIn = !!session;
+    const isLoggedIn = status === 'authenticated' && !!session;
 
     return (
         <>
@@ -58,20 +58,45 @@ export default function LandingContent() {
                         <p className="text-xl md:text-3xl text-white/90 mb-10 drop-shadow-md">
                             Fast, reliable pickups and dropoffs — scheduled in minutes.
                         </p>
+                        {isLoggedIn && (
+                            <p className="text-white text-2xl mb-8">
+                                Welcome back, {session?.user?.firstName ?? 'User'}!
+                            </p>
+                        )}
                         <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                            <Link
-                                href="/register"
-                                className="inline-block bg-blue-600 text-white px-10 py-5 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
-                            >
-                                Get Started
-                            </Link>
-                            {!isLoggedIn && (
-                                <button
-                                    onClick={openLogin}
-                                    className="inline-block bg-blue-600 text-white px-10 py-5 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
-                                >
-                                    Login
-                                </button>
+                            {isLoggedIn ? (
+                                // Logged-in users get one primary action button
+                                session?.user?.role === 'COURIER' ? (
+                                    <Link
+                                        href="/courier/dashboard"  // or /courier/history if that's the main view
+                                        className="inline-block bg-blue-600 text-white px-12 py-6 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
+                                    >
+                                        View My Deliveries
+                                    </Link>
+                                ) : (
+                                    <Link
+                                        href="/schedule"
+                                        className="inline-block bg-blue-600 text-white px-12 py-6 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
+                                    >
+                                        Schedule a Pickup
+                                    </Link>
+                                )
+                            ) : (
+                                // Logged-out: two buttons
+                                <>
+                                    <Link
+                                        href="/register"
+                                        className="inline-block bg-blue-600 text-white px-10 py-5 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
+                                    >
+                                        Get Started
+                                    </Link>
+                                    <button
+                                        onClick={openLogin}
+                                        className="inline-block bg-blue-600 text-white px-10 py-5 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
+                                    >
+                                        Login
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
