@@ -59,7 +59,7 @@ export default function LandingContent() {
                             </Link>
                             <button
                                 onClick={openLogin}
-                                className="inline-block bg-white/20 backdrop-blur-sm text-white px-10 py-5 text-xl font-semibold rounded-xl border border-white/40 hover:bg-white/30 transition"
+                                className="inline-block bg-blue-600 text-white px-10 py-5 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
                             >
                                 Login
                             </button>
