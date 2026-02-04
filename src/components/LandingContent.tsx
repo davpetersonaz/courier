@@ -1,8 +1,10 @@
 // src/components/LandingHero.tsx
 'use client';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+import LoginModal from './LoginModal';
 
 const fadeInUp = {
     initial: { opacity: 0, y: 30 },
@@ -16,6 +18,9 @@ const fadeInUp = {
 
 
 export default function LandingContent() {
+    const [isLoginOpen, setIsLoginOpen] = useState(false);
+    const openLogin = () => setIsLoginOpen(true);
+    const closeLogin = () => setIsLoginOpen(false);
     return (
         <>
             {/* Hero */}
@@ -52,12 +57,12 @@ export default function LandingContent() {
                             >
                                 Get Started
                             </Link>
-                            <Link
-                                href="/about"
+                            <button
+                                onClick={openLogin}
                                 className="inline-block bg-white/20 backdrop-blur-sm text-white px-10 py-5 text-xl font-semibold rounded-xl border border-white/40 hover:bg-white/30 transition"
                             >
-                                Learn More
-                            </Link>
+                                Login
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -147,6 +152,9 @@ export default function LandingContent() {
                     Sign Up Now — It&apos;s Free!
                 </Link>
             </motion.section>
+
+            {/* Add the modal at the bottom (same as in Navbar) */}
+            <LoginModal isOpen={isLoginOpen} onClose={closeLogin} />
         </>
     );
 }
