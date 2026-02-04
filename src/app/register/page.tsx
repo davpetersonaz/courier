@@ -1,11 +1,19 @@
 // src/app/register/page.tsx
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Autocomplete } from '@react-google-maps/api';
+import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import Link from 'next/link';
 
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const libraries: ("places")[] = ["places"];
+
 export default function Register() {
+    const { isLoaded, loadError } = useJsApiLoader({
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
+        libraries, // <-- critical for Places
+    });
+
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -55,6 +63,33 @@ export default function Register() {
         }
     };
 
+    useEffect(() => {
+        if (addressVerified && address !== addressVerified) {
+            setAddressVerified(null);
+        }
+    }, [address, addressVerified]);
+
+    if (loadError) {
+        return (
+            <div className="min-h-screen flex items-center justify-center text-red-600 p-4">
+                <p>Unable to load maps. Please check your internet or try again later. (Error: {loadError?.message || 'Unknown'})</p>
+            </div>
+        );
+    }
+
+    if (!isLoaded) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                <div className="text-center">
+                    <p className="text-xl text-blue-600 animate-pulse mb-2">
+                        Loading Google Maps & Places...
+                    </p>
+                    <p className="text-sm text-gray-500">(This usually takes 1–3 seconds)</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
             <div className="w-full max-w-md">
@@ -100,6 +135,7 @@ export default function Register() {
                                 type="password"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
+                                autoComplete="new-password"
                                 placeholder="Password"
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
@@ -114,6 +150,7 @@ export default function Register() {
                                 type="password"
                                 value={confirmPassword}
                                 onChange={e => setConfirmPassword(e.target.value)}
+                                autoComplete="new-password"
                                 placeholder="Confirm Password"
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
@@ -157,7 +194,6 @@ export default function Register() {
                                 onPlaceChanged={() => {
                                     const place = autocompleteRef.current?.getPlace();
                                     if (place?.formatted_address) {
-                                        addressInputRef.current!.value = place.formatted_address;
                                         setAddress(place.formatted_address);
                                         setAddressVerified(place.formatted_address);
                                         if (place?.address_components) {
@@ -170,6 +206,9 @@ export default function Register() {
                                             setCity(newCity);
                                             setState(newState);
                                             setZip(newZip);
+                                        } else {
+                                            // Optional: keep whatever user typed or show a small warning
+                                            console.warn('Incomplete address components from Google');
                                         }
                                     }
                                 }}
@@ -185,6 +224,10 @@ export default function Register() {
                                     value={address}
                                     onChange={(e) => setAddress(e.target.value)}
                                     placeholder="Start typing your address..."
+                                    autoComplete="off new-password"
+                                    autoCorrect="off"                     // macOS/iOS
+                                    spellCheck="false"                    // extra layer
+                                    data-brave-ignore-autofill="true"
                                     className={`mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500 ${
                                         addressVerified ? 'border-green-500 bg-green-50' : ''
                                     }`}
@@ -246,7 +289,7 @@ export default function Register() {
                             </label>
                             <input
                                 id="phone"
-                                type="text"
+                                type="tel"
                                 value={phone}
                                 onChange={e => setPhone(e.target.value)}
                                 placeholder="Phone"

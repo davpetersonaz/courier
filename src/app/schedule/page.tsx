@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
-import { Autocomplete } from '@react-google-maps/api';
+import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 interface OrderFormData {
     pickupDate: string;
@@ -30,12 +32,19 @@ interface Recipient {
     instructions: string | null;
 }
 
+const libraries: ("places")[] = ["places"];
+
 const mapContainerStyle = {
     width: '100%',
     height: '400px',
 };
 
 export default function Schedule() {
+    const { isLoaded, loadError } = useJsApiLoader({
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
+        libraries, // <-- critical for Places
+    });
+
     const { data: session, status } = useSession();
     const router = useRouter();
     const [formData, setFormData] = useState<OrderFormData>({
@@ -67,27 +76,6 @@ export default function Schedule() {
     const dropoffAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
     const pickupInputRef = useRef<HTMLInputElement>(null);
     const dropoffInputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        const suppressBraveSuggestions = (input: HTMLInputElement | null) => {
-            if (!input) return;
-            const onFocus = () => {
-                input.setAttribute('readonly', 'readonly');
-                input.blur(); // force blur to kill popup
-                setTimeout(() => {
-                    input.focus();
-                    setTimeout(() => {
-                        input.removeAttribute('readonly');
-                        input.focus(); // double focus to ensure
-                    }, 30);
-                }, 30);
-            };
-            input.addEventListener('focus', onFocus);
-            return () => input.removeEventListener('focus', onFocus);
-        };
-        suppressBraveSuggestions(pickupInputRef.current);
-        suppressBraveSuggestions(dropoffInputRef.current);
-    }, []);
 
     // Clear verification badge if user edits after verify
     useEffect(() => {
@@ -262,11 +250,23 @@ export default function Schedule() {
     // Price (fixed)
     const price = isBefore9AM ? 15.99 : 12.99;
 
-    // Early return if Maps isn't ready
-    if (typeof window !== 'undefined' && !window.google?.maps?.places) {
+    if (loadError) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-yellow-600 text-xl">Google Places is still loading... Please wait a moment.</p>
+            <div className="min-h-screen flex items-center justify-center text-red-600 p-4">
+                <p>Unable to load maps. Please check your internet or try again later. (Error: {loadError?.message || 'Unknown'})</p>
+            </div>
+        );
+    }
+
+    if (!isLoaded) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                <div className="text-center">
+                    <p className="text-xl text-blue-600 animate-pulse mb-2">
+                        Loading Google Maps & Places...
+                    </p>
+                    <p className="text-sm text-gray-500">(This usually takes 1–3 seconds)</p>
+                </div>
             </div>
         );
     }
@@ -357,9 +357,8 @@ export default function Schedule() {
                                         name="pu-loc-field"
                                         ref={pickupInputRef}
                                         type="text"
-                                        defaultValue={formData.pickupAddress}
+                                        value={formData.pickupAddress}
                                         onChange={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
-                                        onBlur={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
                                         placeholder="Start typing the pickup location..."
                                         autoComplete="off new-password"
                                         autoCorrect="off"                     // macOS/iOS
@@ -527,9 +526,8 @@ export default function Schedule() {
                                         name="do-loc-field"
                                         ref={dropoffInputRef}
                                         type="text"
-                                        defaultValue={formData.dropoffAddress}
+                                        value={formData.dropoffAddress}
                                         onChange={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
-                                        onBlur={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
                                         placeholder="Start typing the dropoff location..."
                                         autoComplete="off new-password"
                                         autoCorrect="off"                     // macOS/iOS
@@ -602,6 +600,20 @@ export default function Schedule() {
                         )}
                     </div>
 
+                    {/* Save Recipient Checkbox */}
+                    <div className="flex items-center space-x-2 my-6">
+                        <input
+                            type="checkbox"
+                            id="saveRecipient"
+                            checked={saveRecipient}
+                            onChange={(e) => setSaveRecipient(e.target.checked)}
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="saveRecipient" className="text-sm font-medium text-gray-700">
+                            Save this recipient for future orders
+                        </label>
+                    </div>
+
                     {/* Fixed Pricing Box */}
                     {pickupVerified && dropoffVerified && (
                         <div className="border border-green-300 p-6 rounded-md bg-green-50">
@@ -633,20 +645,6 @@ export default function Schedule() {
                     ) : (
                         <p className="text-gray-500">Map preview loading...</p>
                     )}
-
-                    {/* Save Recipient Checkbox */}
-                    <div className="flex items-center space-x-2 my-6">
-                        <input
-                            type="checkbox"
-                            id="saveRecipient"
-                            checked={saveRecipient}
-                            onChange={(e) => setSaveRecipient(e.target.checked)}
-                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="saveRecipient" className="text-sm font-medium text-gray-700">
-                            Save this recipient for future orders
-                        </label>
-                    </div>
 
                     {/* Buttons */}
                     <div className="flex space-x-4 justify-end">
