@@ -1,6 +1,7 @@
 // src/components/LandingHero.tsx
 'use client';
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -18,9 +19,16 @@ const fadeInUp = {
 
 
 export default function LandingContent() {
+    const { data: session, status } = useSession();
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const openLogin = () => setIsLoginOpen(true);
     const closeLogin = () => setIsLoginOpen(false);
+    // show a brief loader while session is loading (prevents flash)
+    if (status === 'loading') {
+        return null; // or a minimal spinner if preferred
+    }
+    const isLoggedIn = !!session;
+
     return (
         <>
             {/* Hero */}
@@ -57,12 +65,14 @@ export default function LandingContent() {
                             >
                                 Get Started
                             </Link>
-                            <button
-                                onClick={openLogin}
-                                className="inline-block bg-blue-600 text-white px-10 py-5 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
-                            >
-                                Login
-                            </button>
+                            {!isLoggedIn && (
+                                <button
+                                    onClick={openLogin}
+                                    className="inline-block bg-blue-600 text-white px-10 py-5 text-xl font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
+                                >
+                                    Login
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

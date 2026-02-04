@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import AvailablePickups from '@/components/AvailablePickups';
 import { OrderWithCustomer } from '@/types/order';
+import { formatPhone } from '@/lib/utils';
 
 async function updateOrderStatus(orderId: number, newStatus: OrderStatus) {
     'use server';
@@ -252,7 +253,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                                     <td className="px-4 py-4 font-medium">#{order.id}</td>
                                                     <td className="px-4 py-4">
                                                         {order.customer.firstName} {order.customer.lastName || ''}
-                                                        <p className="text-xs text-gray-500">{order.customer.phone}</p>
+                                                        <p className="text-xs text-gray-500">{formatPhone(order.customer.phone)}</p>
                                                     </td>
                                                     <td className="px-4 py-4 text-xs hidden sm:table-cell">
                                                         {new Date(order.pickupDate).toLocaleDateString()} {order.pickupTime}

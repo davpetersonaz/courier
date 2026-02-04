@@ -5,6 +5,7 @@ import { OrderStatus } from '@/lib/order-status';
 import { redirect } from 'next/navigation';
 import { ExtendedOrder } from '@/types/order';
 import ClientHistory from './ClientHistory';
+import { formatPhone } from '@/lib/utils';
 
 export default async function History() {
     const session = await auth();
@@ -76,12 +77,16 @@ export default async function History() {
                                                 <p className="text-sm text-gray-600">
                                                     {new Date(order.pickupDate).toLocaleDateString()} at {order.pickupTime}
                                                 </p>
-                                                {order.pickupContactName && <p>Contact: {order.pickupContactName} ({order.pickupContactPhone})</p>}
+                                                {order.pickupContactName && order.pickupContactPhone &&
+                                                    <p>Contact: {order.pickupContactName} ({formatPhone(order.pickupContactPhone)})</p>
+                                                }
                                             </div>
                                             <div>
                                                 <p className="font-medium">Dropoff</p>
                                                 <p>{order.dropoffAddress}</p>
-                                                {order.dropoffContactName && <p>Contact: {order.dropoffContactName} ({order.dropoffContactPhone})</p>}
+                                                {order.dropoffContactName && order.dropoffContactName && 
+                                                    <p>Contact: {order.dropoffContactName} ({formatPhone(order.dropoffContactPhone)})</p>
+                                                }
                                             </div>
                                         </div>
 

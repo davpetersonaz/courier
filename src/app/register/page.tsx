@@ -107,7 +107,7 @@ export default function Register() {
                                 type="text"
                                 value={username}
                                 onChange={e => setUsername(e.target.value)}
-                                placeholder="Username"
+                                placeholder="Username (login)"
                                 className="mt-1 border-2 border-gray-300 p-2 w-full rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
