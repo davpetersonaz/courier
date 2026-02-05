@@ -1,7 +1,9 @@
 // src/app/api/user/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth'
+
 import { PrismaClient } from '@prisma/client';
+
+import { auth } from '@/lib/auth'
 
 const prisma = new PrismaClient();
 

@@ -1,9 +1,10 @@
 // src/app/schedule/page.tsx
 'use client';
-import { useState, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useEffect, useRef,useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { useSession } from 'next-auth/react';
+
+import { DirectionsRenderer,GoogleMap, Marker } from '@react-google-maps/api';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';

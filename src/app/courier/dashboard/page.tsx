@@ -1,13 +1,15 @@
 // src/app/courier/dashboard/page.tsx
+import { revalidatePath } from 'next/cache';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+import AvailablePickups from '@/components/AvailablePickups';
+import { StatusUpdateButton } from '@/components/StatusUpdateButton';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { OrderStatus } from '@/lib/order-status';
-import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
-import Link from 'next/link';
-import AvailablePickups from '@/components/AvailablePickups';
-import { OrderWithCustomer } from '@/types/order';
 import { formatPhone } from '@/lib/utils';
+import { OrderWithCustomer } from '@/types/order';
 
 async function updateOrderStatus(orderId: number, newStatus: OrderStatus) {
     'use server';
@@ -200,16 +202,22 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                                     <td className="px-4 py-4">
                                                         {order.status === OrderStatus.EN_ROUTE_PICKUP && (
                                                             <form action={updateOrderStatus.bind(null, order.id, OrderStatus.PICKED_UP)}>
-                                                                <button type="submit" className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
-                                                                    Mark Picked Up
-                                                                </button>
+                                                                <StatusUpdateButton
+                                                                    orderId={order.id}
+                                                                    nextStatus={OrderStatus.PICKED_UP}
+                                                                    label="Mark Picked Up"
+                                                                    color="blue"
+                                                                />
                                                             </form>
                                                         )}
                                                         {order.status === OrderStatus.PICKED_UP && (
                                                             <form action={updateOrderStatus.bind(null, order.id, OrderStatus.DELIVERED)}>
-                                                                <button type="submit" className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700">
-                                                                    Mark Delivered
-                                                                </button>
+                                                                <StatusUpdateButton
+                                                                    orderId={order.id}
+                                                                    nextStatus={OrderStatus.DELIVERED}
+                                                                    label="Mark Delivered"
+                                                                    color="green"
+                                                                />
                                                             </form>
                                                         )}
                                                     </td>

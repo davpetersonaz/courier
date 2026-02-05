@@ -1,11 +1,13 @@
 // src/app/history/page.tsx
-import prisma from '@/lib/db';
-import { auth } from '@/lib/auth';
-import { OrderStatus } from '@/lib/order-status';
 import { redirect } from 'next/navigation';
-import { ExtendedOrder } from '@/types/order';
-import ClientHistory from './ClientHistory';
+
+import { auth } from '@/lib/auth';
+import prisma from '@/lib/db';
+import { OrderStatus } from '@/lib/order-status';
 import { formatPhone } from '@/lib/utils';
+import { ExtendedOrder } from '@/types/order';
+
+import ClientHistory from './ClientHistory';
 
 export default async function History() {
     const session = await auth();

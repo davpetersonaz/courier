@@ -1,11 +1,14 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
-import "../styles/global.css";
+import Script from 'next/script';
+
+import { Toaster } from 'sonner';
+
 import Navbar from '@/components/Navbar';
 import SessionProviderWrapper from '@/components/SessionProviderWrapper';
-import { Toaster } from 'sonner';
 import SessionTimeout from '@/components/SessionTimeout';
-import Script from 'next/script';
+
+import "../styles/global.css";
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 

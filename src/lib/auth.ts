@@ -1,9 +1,11 @@
 // src/lib/auth.ts
 import NextAuth from "next-auth";
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import Credentials from "next-auth/providers/credentials";
-import prisma from "@/lib/db";
+
+import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from "bcrypt";
+
+import prisma from "@/lib/db";
 
 const authConfig = {
     adapter: PrismaAdapter(prisma),

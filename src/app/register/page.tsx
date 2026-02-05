@@ -1,9 +1,10 @@
 // src/app/register/page.tsx
 'use client';
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
+import { useEffect,useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const libraries: ("places")[] = ["places"];

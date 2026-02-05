@@ -1,7 +1,8 @@
 // src/components/SessionTimeout.tsx
 'use client';
-import { useSession, signOut } from 'next-auth/react';
 import { useEffect } from 'react';
+import { signOut,useSession } from 'next-auth/react';
+
 import { toast } from 'sonner';
 
 const INACTIVITY_TIMEOUT = 12 * 60 * 60 * 1000; // 12 hours in ms

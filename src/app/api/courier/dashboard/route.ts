@@ -1,8 +1,9 @@
 // src/app/api/courier/dashboard/route.ts
+import { NextResponse } from 'next/server';
+
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { OrderStatus } from '@/lib/order-status';
-import { NextResponse } from 'next/server';
 
 export async function GET() {
     const session = await auth();

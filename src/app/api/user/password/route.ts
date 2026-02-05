@@ -1,8 +1,10 @@
 // src/app/api/user/password/route.ts
 import { NextResponse } from 'next/server';
+
+import bcrypt from 'bcrypt';
+
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
-import bcrypt from 'bcrypt';
 
 export async function POST(request: Request) {
     const session = await auth();

@@ -1,6 +1,6 @@
 // src/components/LoginModal.tsx
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect,useState } from 'react';
 import { signIn } from 'next-auth/react';
 
 interface LoginModalProps {

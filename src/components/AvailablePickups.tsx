@@ -1,9 +1,13 @@
 // src/components/AvailablePickups.tsx
 'use client';
 import { useState } from 'react';
-import { GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
-import { OrderWithCustomer } from '@/types/order';
+
+import { DirectionsRenderer,GoogleMap } from '@react-google-maps/api';
+
+import { updateOrderStatus } from '@/actions/orderActions';
+import { StatusUpdateButton } from '@/components/StatusUpdateButton';
 import { OrderStatus } from '@/lib/order-status';
+import { OrderWithCustomer } from '@/types/order';
 
 interface AvailablePickupsProps {
     orders: Array<{
@@ -30,25 +34,6 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
         setSelected(prev =>
             prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
         );
-    };
-
-    const acceptJob = async (orderId: number) => {
-        try {
-            const res = await fetch('/api/orders/accept', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, status: 'EN_ROUTE_PICKUP' }),
-            });
-            if (res.ok) {
-                alert('Job accepted!');
-                window.location.reload(); // refresh to update UI
-            } else {
-                alert('Failed to accept job');
-            }
-        } catch (err) {
-            console.error('error in AvailablePickups', err);
-            alert('Error accepting job');
-        }
     };
 
     const generateRoute = async () => {
@@ -206,12 +191,14 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                                             {order.totalPieces} pcs • {order.orderWeight} lbs
                                         </td>
                                         <td className="px-4 py-4 text-center">
-                                            <button
-                                                onClick={() => acceptJob(order.id)}
-                                                className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                                            >
-                                                Accept Job
-                                            </button>
+                                            <form action={updateOrderStatus.bind(null, order.id, OrderStatus.EN_ROUTE_PICKUP)}>
+                                                <StatusUpdateButton
+                                                    orderId={order.id}
+                                                    nextStatus={OrderStatus.EN_ROUTE_PICKUP}
+                                                    label="Accept Job"
+                                                    color="green"
+                                                />
+                                            </form>
                                         </td>
                                     </tr>
                                 ))}

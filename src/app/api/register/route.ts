@@ -1,7 +1,9 @@
 // src/app/api/register/route.ts
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+
 import bcrypt from 'bcrypt';
+
+import prisma from '@/lib/db';
 
 export async function OPTIONS() {
     return new NextResponse(null, {

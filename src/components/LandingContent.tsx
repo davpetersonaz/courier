@@ -1,10 +1,12 @@
 // src/components/LandingHero.tsx
 'use client';
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+
+import { motion } from 'framer-motion';
+
 import LoginModal from './LoginModal';
 
 const fadeInUp = {
