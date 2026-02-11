@@ -8,7 +8,12 @@ import prisma from '@/lib/db';
 
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ start?: string; end?: string }>; }) {
     const session = await auth();
-    if (!session || session.user.role !== 'ADMIN'){ redirect('/'); }
+    if (!session) {
+        redirect('/login');
+    }
+    if (session.user?.role !== 'ADMIN') {
+        redirect('/');
+    }
 
     const params = await searchParams;
     const today = new Date();
