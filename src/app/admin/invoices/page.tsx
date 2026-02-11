@@ -1,8 +1,10 @@
 // src/app/admin/invoices/page.tsx
+import { redirect } from 'next/navigation';
+
+import { format } from 'date-fns';
+
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
-import { redirect } from 'next/navigation';
-import { format } from 'date-fns';
 
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ start?: string; end?: string }>; }) {
     const session = await auth();
