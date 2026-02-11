@@ -35,6 +35,11 @@ export default function Navbar() {
                                 <Link href="/schedule" scroll={true} className="hover:opacity-80 transition">Schedule</Link>
                                 <Link href="/history" scroll={true} className="hover:opacity-80 transition">History</Link>
                                 <Link href="/account" scroll={true} className="hover:opacity-80 transition">My Account</Link>
+                                {session.user?.role === "ADMIN" && (
+                                    <Link href="/admin/invoices" scroll={true} className="hover:opacity-80 transition">
+                                        Invoices
+                                    </Link>
+                                )}
                                 <button onClick={handleLogout} className="hover:opacity-80 transition">Logout</button>
                             </>
                         ) : (
@@ -97,6 +102,15 @@ export default function Navbar() {
                                     >
                                         My Account
                                     </Link>
+                                    {session.user?.role === "ADMIN" && (
+                                        <Link
+                                            href="/admin/invoices" scroll={true}
+                                            className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                        >
+                                            Invoices
+                                        </Link>
+                                    )}
                                     <button
                                         onClick={() => {
                                             handleLogout();
