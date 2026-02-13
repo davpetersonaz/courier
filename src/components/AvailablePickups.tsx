@@ -2,25 +2,16 @@
 'use client';
 import { useState } from 'react';
 
-import { DirectionsRenderer,GoogleMap } from '@react-google-maps/api';
+import { DirectionsRenderer, GoogleMap } from '@react-google-maps/api';
 
 import { updateOrderStatus } from '@/actions/orderActions';
 import { StatusUpdateButton } from '@/components/StatusUpdateButton';
 import { OrderStatus } from '@/lib/order-status';
-import { OrderWithCustomer } from '@/types/order';
+import { formatPhone } from '@/lib/utils';
+import { PendingOrder } from '@/types/order';
 
 interface AvailablePickupsProps {
-    orders: Array<{
-        id: number;
-        customer: { firstName: string; lastName: string | null; phone: string };
-        pickupDate: Date;
-        pickupTime: string;
-        pickupAddress: string;
-        dropoffAddress: string;
-        totalPieces: number;
-        orderWeight: number;
-        status: OrderStatus;
-    }>;
+    orders: PendingOrder[];
     courierAddress: string;
 }
 
@@ -162,7 +153,7 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {orders.map((order: OrderWithCustomer) => (
+                                {orders.map((order) => (
                                     <tr key={order.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-4 text-center">
                                             <input
@@ -174,8 +165,8 @@ export default function AvailablePickups({ orders, courierAddress }: AvailablePi
                                         </td>
                                         <td className="px-4 py-4 font-medium">#{order.id}</td>
                                         <td className="px-4 py-4">
-                                            {order.customer.firstName} {order.customer.lastName || ''}
-                                            <p className="text-xs text-gray-500">{order.customer.phone}</p>
+                                            {order.customer.firstName ?? 'Unknown'} {order.customer.lastName ?? ''}
+                                            <p className="text-xs text-gray-500">{formatPhone(order.customer.phone)}</p>
                                         </td>
                                         <td className="px-4 py-4 hidden md:table-cell">
                                             {new Date(order.pickupDate).toLocaleDateString()} <br />

@@ -3,29 +3,34 @@ import { redirect } from 'next/navigation';
 
 import { format } from 'date-fns';
 
+import { DateRangePicker } from '@/components/DateRangePicker';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
 
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ start?: string; end?: string }>; }) {
     const session = await auth();
-    if (!session) {
-        redirect('/login');
-    }
-    if (session.user?.role !== 'ADMIN') {
-        redirect('/');
-    }
+    if (!session) { redirect('/login'); }
+    if (session.user?.role !== 'ADMIN') { redirect('/'); }
 
     const params = await searchParams;
     const today = new Date();
-    const start = params.start ? new Date(params.start) : new Date(today.setDate(today.getDate() - 7));
-    const end = params.end ? new Date(params.end) : today;
+    const defaultStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const defaultEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const startDate = params.start ? new Date(params.start) : defaultStart;
+    const endDate = params.end ? new Date(params.end) : defaultEnd;
+
+    // Validate dates (prevent invalid ranges)
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || startDate > endDate) {
+        // Fallback to defaults if bad params
+        return redirect('/admin/invoices');
+    }
 
     const orders = await prisma.order.findMany({
         where: {
-            createdAt: { gte: start, lte: end },
-            customerId: 1, // ← hardcode your friend's user ID for now, or make dynamic later
+            createdAt: { gte: startDate, lte: endDate },
+            // customerId: 1, // ← hardcode user ID, or make dynamic later
         },
-            include: {
+        include: {
             customer: { select: { firstName: true, lastName: true, email: true } },
         },
         orderBy: { createdAt: 'asc' },
@@ -40,37 +45,18 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="max-w-6xl mx-auto">
-                <h1 className="text-3xl font-bold mb-6">Weekly Invoices</h1>
+                <h1 className="text-3xl font-bold mb-6">Invoices</h1>
 
-                {/* Date range picker - simple for MVP */}
-                <form className="mb-8 flex gap-4 items-end">
-                    <div>
-                        <label className="block text-sm mb-1">Start Date</label>
-                        <input
-                            type="date"
-                            name="start"
-                            defaultValue={format(start, 'yyyy-MM-dd')}
-                            className="border rounded px-3 py-2"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm mb-1">End Date</label>
-                        <input
-                            type="date"
-                            name="end"
-                            defaultValue={format(end, 'yyyy-MM-dd')}
-                            className="border rounded px-3 py-2"
-                        />
-                    </div>
-                    <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-                        Generate
-                    </button>
-                </form>
+                {/* Client-side date picker with auto-update */}
+                <DateRangePicker
+                    defaultStart={format(startDate, 'yyyy-MM-dd')}
+                    defaultEnd={format(endDate, 'yyyy-MM-dd')}
+                />
 
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-semibold">
-                            Invoice Summary ({format(start, 'MMM d')} – {format(end, 'MMM d, yyyy')})
+                            Summary ({format(startDate, 'MMM d')} – {format(endDate, 'MMM d, yyyy')})
                         </h2>
                         <div className="text-right">
                             <p className="text-xl font-bold">Total: ${totalAmount.toFixed(2)}</p>

@@ -23,9 +23,7 @@ export default function Navbar() {
                 <div className="flex justify-between items-center h-16">
                     {/* Logo / Home */}
                     <div className="shrink-0">
-                        <Link href="/" scroll={true} className="text-xl font-bold hover:opacity-80">
-                            SpeedyCourier
-                        </Link>
+                        <Link href="/" scroll={true} className="text-xl font-bold hover:opacity-80">SpeedyCourier</Link>
                     </div>
 
                     {/* Desktop Navigation */}
@@ -33,12 +31,14 @@ export default function Navbar() {
                         {session ? (
                             <>
                                 <Link href="/schedule" scroll={true} className="hover:opacity-80 transition">Schedule</Link>
-                                <Link href="/history" scroll={true} className="hover:opacity-80 transition">History</Link>
+                                {session.user?.role === 'COURIER' ? (
+                                    <Link href="/history" scroll={true} className="hover:opacity-80 transition">Deliveries</Link>
+                                ) : (
+                                    <Link href="/history" scroll={true} className="hover:opacity-80 transition">History</Link>
+                                )}
                                 <Link href="/account" scroll={true} className="hover:opacity-80 transition">My Account</Link>
                                 {session.user?.role === "ADMIN" && (
-                                    <Link href="/admin/invoices" scroll={true} className="hover:opacity-80 transition">
-                                        Invoices
-                                    </Link>
+                                    <Link href="/admin/invoices" scroll={true} className="hover:opacity-80 transition">Invoices</Link>
                                 )}
                                 <button onClick={handleLogout} className="hover:opacity-80 transition">Logout</button>
                             </>
@@ -90,12 +90,21 @@ export default function Navbar() {
                                     >
                                         Schedule
                                     </Link>
-                                    <Link href="/history" scroll={true}
-                                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                    >
-                                        History
-                                    </Link>
+                                    {session.user?.role === 'COURIER' ? (
+                                        <Link href="/courier/dashboard" scroll={true}
+                                            className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                        >
+                                            Deliveries
+                                        </Link>
+                                    ) : (
+                                        <Link href="/history" scroll={true}
+                                            className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                        >
+                                            History
+                                        </Link>
+                                    )}
                                     <Link href="/account" scroll={true}
                                         className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
                                         onClick={() => setIsMobileMenuOpen(false)}

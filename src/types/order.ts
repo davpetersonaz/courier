@@ -34,3 +34,19 @@ export type OrderWithCustomer = {
     totalPieces: number;
     orderWeight: number;
 };
+
+export type PendingOrder = {
+    id: number;
+    status: OrderStatus;
+    customer: {
+        firstName: string | null;
+        lastName: string | null;
+        phone: string;
+    };
+    pickupDate: Date;
+    pickupTime: string;
+    pickupAddress: string;
+    dropoffAddress: string;
+    totalPieces: number;
+    orderWeight: number;
+};

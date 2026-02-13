@@ -4,6 +4,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+// this wrapper soft-refreshes the history content every 15 seconds
 export default function ClientHistory({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 

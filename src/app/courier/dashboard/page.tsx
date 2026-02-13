@@ -3,13 +3,12 @@ import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import AvailablePickups from '@/components/AvailablePickups';
-import { StatusUpdateButton } from '@/components/StatusUpdateButton';
+import { AvailablePickupsWithModal } from '@/components/AvailablePickupsWithModal';
+import { CourierTableWithModal } from '@/components/CourierTableWithModal';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { OrderStatus } from '@/lib/order-status';
-import { formatPhone } from '@/lib/utils';
-import { OrderWithCustomer } from '@/types/order';
+import { ExtendedOrder } from '@/types/order';
 
 async function updateOrderStatus(orderId: number, newStatus: OrderStatus) {
     'use server';
@@ -69,26 +68,21 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
         }),
         prisma.order.findMany({
             where: { courierId, status: { in: [OrderStatus.EN_ROUTE_PICKUP, OrderStatus.PICKED_UP] } },
-            include: { customer: { select: { firstName: true, lastName: true, phone: true } } },
-            orderBy: { pickupDate: 'asc' },
+            include: {
+                customer: { select: { firstName: true, lastName: true, phone: true } },
+                courier: { select: { firstName: true, lastName: true } },
+                history: {
+                    orderBy: { updatedAt: 'asc' },
+                    include: { changedBy: { select: { firstName: true, lastName: true } } }
+                },
+            },
+            orderBy: { pickupDate: 'asc' }
         }),
         prisma.order.count({ where: { courierId, status: OrderStatus.DELIVERED } }),
     ]);
 
-    // Fetch history only when needed
-    let historyOrders = [] as {
-        id: number;
-        pickupDate: Date;
-        pickupTime: string;
-        pickupAddress: string;
-        dropoffAddress: string;
-        updatedAt: Date;
-        customer: {
-            firstName: string;
-            lastName: string | null;
-            phone: string;
-        };
-    }[];
+    // History with pagination and full relations
+    let historyOrders: ExtendedOrder[] = [];
     let totalPages = 1;
     let currentPage = 1;
 
@@ -97,7 +91,14 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
         const [orders, count] = await Promise.all([
             prisma.order.findMany({
                 where: { courierId, status: OrderStatus.DELIVERED },
-                include: { customer: { select: { firstName: true, lastName: true, phone: true } } },
+                include: {
+                    customer: { select: { firstName: true, lastName: true, phone: true } },
+                    courier: { select: { firstName: true, lastName: true } },
+                    history: {
+                        orderBy: { updatedAt: 'asc' },
+                        include: { changedBy: { select: { firstName: true, lastName: true } } }
+                    }
+                },
                 orderBy: { updatedAt: 'desc' },
                 take: 25,
                 skip
@@ -149,10 +150,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
 
                 {/* Available Pickups */}
                 {tab === 'available' && (
-                    <AvailablePickups
-                        orders={pendingOrders}
-                        courierAddress={courierAddress}
-                    />
+                    <AvailablePickupsWithModal orders={pendingOrders} courierAddress={courierAddress} />
                 )}
 
                 {tab === 'progress' && (
@@ -162,125 +160,31 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                 No orders in progress right now.
                             </div>
                         ) : (
-                            <section className="bg-white rounded-lg shadow overflow-hidden">
-                                <h2 className="px-6 py-4 text-xl font-semibold bg-gray-50 border-b">
-                                    In Progress ({inProgressOrders.length})
-                                </h2>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 border-b">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left">Order ID</th>
-                                                <th className="px-4 py-3 text-left">Status</th>
-                                                <th className="px-4 py-3 text-left">Customer</th>
-                                                <th className="px-4 py-3 text-left hidden md:table-cell">Pickup/Dropoff</th>
-                                                <th className="px-4 py-3 text-left">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y">
-                                            {inProgressOrders.map((order: OrderWithCustomer) => (
-                                                <tr key={order.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-4 font-medium">#{order.id}</td>
-                                                    <td className="px-4 py-4">
-                                                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                                                            order.status === OrderStatus.EN_ROUTE_PICKUP
-                                                                ? 'bg-yellow-100 text-yellow-800'
-                                                                : 'bg-blue-100 text-blue-800'
-                                                        }`}>
-                                                            {order.status.replace(/_/g, ' ')}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        {order.customer.firstName} {order.customer.lastName || ''}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-xs hidden md:table-cell">
-                                                        <div className="max-w-xs">
-                                                            <p className="truncate"><strong>From:</strong> {order.pickupAddress}</p>
-                                                            <p className="truncate"><strong>To:</strong> {order.dropoffAddress}</p>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        {order.status === OrderStatus.EN_ROUTE_PICKUP && (
-                                                            <form action={updateOrderStatus.bind(null, order.id, OrderStatus.PICKED_UP)}>
-                                                                <StatusUpdateButton
-                                                                    orderId={order.id}
-                                                                    nextStatus={OrderStatus.PICKED_UP}
-                                                                    label="Mark Picked Up"
-                                                                    color="blue"
-                                                                />
-                                                            </form>
-                                                        )}
-                                                        {order.status === OrderStatus.PICKED_UP && (
-                                                            <form action={updateOrderStatus.bind(null, order.id, OrderStatus.DELIVERED)}>
-                                                                <StatusUpdateButton
-                                                                    orderId={order.id}
-                                                                    nextStatus={OrderStatus.DELIVERED}
-                                                                    label="Mark Delivered"
-                                                                    color="green"
-                                                                />
-                                                            </form>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </section>
+                            <CourierTableWithModal
+                                orders={inProgressOrders}
+                                title={`In Progress (${inProgressOrders.length})`}
+                                tab="progress"
+                                updateOrderStatus={updateOrderStatus}
+                            />
                         )}
                     </>
                 )}
 
                 {/* Full Paginated Delivery History */}
                 {tab === 'history' && (
-                    <section className="bg-white rounded-lg shadow overflow-hidden">
-                        <h2 className="px-6 py-4 text-xl font-semibold bg-gray-50 border-b">
-                            Delivery History ({deliveredCount} total)
-                        </h2>
-
+                    <>
                         { historyOrders.length === 0 ? (
                             <div className="p-8 text-center text-gray-600">
                                 No deliveries completed yet. Your first one is coming soon!
                             </div>
                         ) : (
                             <>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 border-b">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left">Order ID</th>
-                                                <th className="px-4 py-3 text-left">Customer</th>
-                                                <th className="px-4 py-3 text-left hidden sm:table-cell">Pickup</th>
-                                                <th className="px-4 py-3 text-left hidden md:table-cell">Dropoff</th>
-                                                <th className="px-4 py-3 text-left">Completed</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {historyOrders.map((order) => (
-                                                <tr key={order.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-4 font-medium">#{order.id}</td>
-                                                    <td className="px-4 py-4">
-                                                        {order.customer.firstName} {order.customer.lastName || ''}
-                                                        <p className="text-xs text-gray-500">{formatPhone(order.customer.phone)}</p>
-                                                    </td>
-                                                    <td className="px-4 py-4 text-xs hidden sm:table-cell">
-                                                        {new Date(order.pickupDate).toLocaleDateString()} {order.pickupTime}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-xs hidden md:table-cell truncate max-w-xs">
-                                                        {order.dropoffAddress}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-xs">
-                                                        {new Date(order.updatedAt).toLocaleDateString()} <br />
-                                                        <span className="text-gray-500">
-                                                            {new Date(order.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
+                                <CourierTableWithModal
+                                    orders={historyOrders}
+                                    title={`Delivery History (${deliveredCount} total)`}
+                                    tab="history"
+                                    updateOrderStatus={updateOrderStatus}
+                                />
                                 {/* Pagination */}
                                 <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t">
                                     <p className="text-sm text-gray-700">
@@ -305,7 +209,7 @@ export default async function CourierDashboard({ searchParams }: { searchParams:
                                 </div>
                             </>
                         )}
-                    </section>
+                    </>
                 )}
             </div>
         </div>
