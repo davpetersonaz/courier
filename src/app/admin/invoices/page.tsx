@@ -16,7 +16,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     const params = await searchParams;
     const today = new Date();
     const defaultStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const defaultEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const defaultEnd = today;
     const startDate = params.start ? new Date(params.start) : defaultStart;
     const endDate = params.end ? new Date(params.end) : defaultEnd;
 
