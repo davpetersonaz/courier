@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { format } from 'date-fns';
 
+import { AdminInvoiceTableClient } from '@/components/AdminInvoiceTableClient';
 import { DateRangePicker } from '@/components/DateRangePicker';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
@@ -47,7 +48,6 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             <div className="max-w-6xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6">Invoices</h1>
 
-                {/* Client-side date picker with auto-update */}
                 <DateRangePicker
                     defaultStart={format(startDate, 'yyyy-MM-dd')}
                     defaultEnd={format(endDate, 'yyyy-MM-dd')}
@@ -68,39 +68,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                         <p className="text-center text-gray-600 py-8">No deliveries in this period.</p>
                     ) : (
                         <>
-                            <table className="w-full text-left mb-6">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-4 py-3">Order #</th>
-                                        <th className="px-4 py-3">Date / Time</th>
-                                        <th className="px-4 py-3">Pickup → Dropoff</th>
-                                        <th className="px-4 py-3">Pieces / Weight</th>
-                                        <th className="px-4 py-3 text-right">Charge</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {orders.map((order) => {
-                                        const price = order.pickupDate.getHours() < 9 ? 15.99 : 12.99;
-                                        return (
-                                            <tr key={order.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3">#{order.id}</td>
-                                                <td className="px-4 py-3">
-                                                    {format(order.pickupDate, 'MMM d, yyyy')} at {order.pickupTime}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {order.pickupAddress} → {order.dropoffAddress}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {order.totalPieces} pcs / {order.orderWeight} lbs
-                                                </td>
-                                                <td className="px-4 py-3 text-right">${price.toFixed(2)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-
-                            <div className="flex justify-end">
+                            <AdminInvoiceTableClient orders={orders} />
+                            <div className="flex justify-end mt-6">
                                 <button className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">
                                     Export PDF / Email Invoice
                                 </button>

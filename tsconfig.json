@@ -19,19 +19,9 @@
         "isolatedModules": true,
         "jsx": "preserve",
         "incremental": true,
-        "plugins": [
-            {
-                "name": "next"
-            }
-        ],
-        "paths": {
-        "@/*": [
-            "./src/*"
-        ]
-        },
-        "types": [
-            "@types/google.maps"
-        ]
+        "plugins": [{ "name": "next" }],
+        "paths": { "@/*": [ "./src/*" ] },
+        "types": [ "@types/google.maps" ]
     },
     "include": [
         "**/*.ts",
