@@ -33,7 +33,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             // customerId: 1, // ← hardcode user ID, or make dynamic later
         },
         include: {
-            customer: { select: { firstName: true, lastName: true, email: true } },
+            customer: { select: { firstName: true, lastName: true, email: true, phone: true } },
         },
         orderBy: { createdAt: 'asc' },
     });
