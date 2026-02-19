@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 
 import { AdminInvoiceTableClient } from '@/components/AdminInvoiceTableClient';
 import { DateRangePicker } from '@/components/DateRangePicker';
+import { InvoiceExportButton } from '@/components/InvoiceExportButton';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
 
@@ -70,9 +71,12 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                         <>
                             <AdminInvoiceTableClient orders={orders} />
                             <div className="flex justify-end mt-6">
-                                <button className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">
-                                    Export PDF / Email Invoice
-                                </button>
+                                <InvoiceExportButton
+                                    orders={orders}
+                                    startDate={startDate}
+                                    endDate={endDate}
+                                    totalAmount={totalAmount}
+                                />
                             </div>
                         </>
                     )}

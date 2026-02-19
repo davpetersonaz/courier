@@ -82,6 +82,7 @@ model Order {
     paid                Boolean @default(false)
     invoiceId           String?
     billingNotes        String?
+    invoiceSentAt       DateTime?
 }
 
 model OrderHistory {
