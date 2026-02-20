@@ -1,6 +1,5 @@
 // src/components/InvoiceExportButton.tsx
 'use client';
-
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -12,6 +11,7 @@ interface InvoiceExportButtonProps {
     startDate: Date;
     endDate: Date;
     totalAmount: number;
+    isCustomerFiltered: boolean;
 }
 
 function cleanAddress(address: string): string {
@@ -99,7 +99,9 @@ const createInvoicePDF = (
     return doc;
 };
 
-export function InvoiceExportButton({ orders, startDate, endDate, totalAmount }: InvoiceExportButtonProps) {
+export function InvoiceExportButton({ orders, startDate, endDate, totalAmount, isCustomerFiltered }: InvoiceExportButtonProps) {
+    const isFiltered = isCustomerFiltered ?? false;
+
     const generatePDF = () => {
         const doc = createInvoicePDF(orders, startDate, endDate, totalAmount);
         doc.save(`SpeedyCourier_Invoice_${format(startDate, 'yyyy-MM-dd')}_to_${format(endDate, 'yyyy-MM-dd')}.pdf`);
@@ -107,6 +109,14 @@ export function InvoiceExportButton({ orders, startDate, endDate, totalAmount }:
 
     const sendEmail = async () => {
         if (!confirm('Send invoice email?')) return;
+
+        // a filter option must be selected to email out an invoice
+        const uniqueCustomers = new Set(orders.map(o => o.customer?.email).filter(Boolean));
+        if (uniqueCustomers.size > 1) {
+            if (!confirm(`This invoice covers ${uniqueCustomers.size} different clients. Send to all?`)) {
+                return;
+            }
+        }
 
         const doc = createInvoicePDF(orders, startDate, endDate, totalAmount);
         const pdfBlob = doc.output('blob');
@@ -139,7 +149,13 @@ export function InvoiceExportButton({ orders, startDate, endDate, totalAmount }:
             >
                 Export PDF
             </button>
-            <button onClick={sendEmail} className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">
+            <button onClick={sendEmail} disabled={!isFiltered}
+                className={`px-6 py-3 rounded text-white transition
+                    ${isFiltered
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-gray-400 cursor-not-allowed opacity-60'}
+                `}
+            >
                 Email Invoice
             </button>
         </div>

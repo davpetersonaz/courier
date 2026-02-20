@@ -4,12 +4,13 @@ import { redirect } from 'next/navigation';
 import { format } from 'date-fns';
 
 import { AdminInvoiceTableClient } from '@/components/AdminInvoiceTableClient';
+import { CustomerFilterDropdown } from '@/components/CustomerFilterDropdown';
 import { DateRangePicker } from '@/components/DateRangePicker';
 import { InvoiceExportButton } from '@/components/InvoiceExportButton';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
 
-export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ start?: string; end?: string }>; }) {
+export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ start?: string; end?: string; customerId?: string }>; }) {
     const session = await auth();
     if (!session) { redirect('/login'); }
     if (session.user?.role !== 'ADMIN') { redirect('/'); }
@@ -27,10 +28,30 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
         return redirect('/admin/invoices');
     }
 
+    // Fetch unique customers with orders in range
+    const customersWithInvoices = await prisma.user.findMany({
+        where: {
+            role: 'CUSTOMER',
+            orders: {
+                some: {
+                    createdAt: { gte: startDate, lte: endDate },
+                },
+            },
+        },
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+        },
+        orderBy: { firstName: 'asc' },
+    });
+
+    // Fetch orders (now with optional customer filter)
     const orders = await prisma.order.findMany({
         where: {
             createdAt: { gte: startDate, lte: endDate },
-            // customerId: 1, // ← hardcode user ID, or make dynamic later
+            ...(params.customerId ? { customerId: Number(params.customerId) } : {})
         },
         include: {
             customer: { select: { firstName: true, lastName: true, email: true, phone: true } },
@@ -49,9 +70,16 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             <div className="max-w-6xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6">Invoices</h1>
 
-                <DateRangePicker
-                    defaultStart={format(startDate, 'yyyy-MM-dd')}
-                    defaultEnd={format(endDate, 'yyyy-MM-dd')}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <DateRangePicker
+                        defaultStart={format(startDate, 'yyyy-MM-dd')}
+                        defaultEnd={format(endDate, 'yyyy-MM-dd')}
+                    />
+                </div>
+
+                <CustomerFilterDropdown
+                    customers={customersWithInvoices}
+                    currentCustomerId={params.customerId}
                 />
 
                 <div className="bg-white rounded-lg shadow p-6">
@@ -76,6 +104,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                                     startDate={startDate}
                                     endDate={endDate}
                                     totalAmount={totalAmount}
+                                    isCustomerFiltered={!!params.customerId}
                                 />
                             </div>
                         </>

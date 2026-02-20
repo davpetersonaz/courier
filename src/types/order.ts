@@ -25,6 +25,7 @@ export type OrderWithCustomer = {
     customer: {
         firstName: string;
         lastName: string | null;
+        email: string;
         phone: string;
     };
     pickupDate: Date;
