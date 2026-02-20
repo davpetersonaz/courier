@@ -14,21 +14,31 @@ interface InvoiceExportButtonProps {
     totalAmount: number;
 }
 
+function cleanAddress(address: string): string {
+    return address
+        .replace(/,\s*USA$/i, '')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')          // Remove zero-width chars
+        .replace(/[\u00A0\u202F\u205F]/g, ' ')          // Replace fancy spaces with regular space
+        .replace(/\s+/g, ' ')                           // Collapse multiple spaces
+        .trim();
+}
+
 const createInvoicePDF = (
     orders: InvoiceExportButtonProps['orders'],
     startDate: Date,
     endDate: Date,
     totalAmount: number
 ): jsPDF => {
-    const doc = new jsPDF();
+    const doc = new jsPDF('landscape', 'mm', 'a4');
 
     // Header
-    doc.setFontSize(18);
-    doc.text('SpeedyCourier Invoice', 14, 20);
+    doc.setFont('helvetica');
+    doc.setFontSize(20);
+    doc.text('SpeedyCourier Invoice', doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
     // title line
     doc.setLineWidth(0.5);
     doc.setDrawColor(200);
-    doc.line(14, 45, 196, 45);
+    doc.line(14, 45, doc.internal.pageSize.getWidth() - 14, 45);
     // Sub-header
     doc.setFontSize(12);
     doc.text(`Period: ${format(startDate, 'MMM d, yyyy')} – ${format(endDate, 'MMM d, yyyy')}`, 14, 30);
@@ -37,34 +47,43 @@ const createInvoicePDF = (
     // Table
     autoTable(doc, {
         startY: 50,
-        head: [['Order #', 'Date / Time', 'Pickup → Dropoff', 'Pieces / Weight', 'Charge']],
+        head: [['Order', 'Date / Time', 'Pickup / Dropoff', 'Pieces / Weight', 'Charge']],
         body: orders.map(order => {
             const price = order.pickupDate.getHours() < 9 ? 15.99 : 12.99;
+            const pickup = cleanAddress(order.pickupAddress);
+            const dropoff = cleanAddress(order.dropoffAddress);
             return [
                 `#${order.id}`,
                 `${format(order.pickupDate, 'MMM d, yyyy')} at ${order.pickupTime}`,
-                `${order.pickupAddress} → ${order.dropoffAddress}`,
+                `P: ${pickup}\nD: ${dropoff}`,
                 `${order.totalPieces} pcs / ${order.orderWeight} lbs`,
                 `$${price.toFixed(2)}`,
             ];
         }),
         theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] }, // blue-600
+        headStyles: {
+            fillColor: [59, 130, 246], // blue-600
+            fontStyle: 'bold',
+            halign: 'center'
+        },
         styles: {
             fontSize: 9,              // Slightly smaller to fit more text
             cellPadding: 4,
             overflow: 'linebreak',    // ← this wraps long addresses
             valign: 'middle',
+            halign: 'left',
+            lineWidth: 0.1
         },
         columnStyles: {
-            0: { cellWidth: 20 },  // Order #
-            1: { cellWidth: 40 },  // Date / Time
-            2: { cellWidth: 80 },  // Pickup → Dropoff (widest column for addresses)
-            3: { cellWidth: 35 },  // Pieces / Weight
-            4: { cellWidth: 25 },  // Charge
+            0: { cellWidth: 20, halign: 'center' },  // Order #
+            1: { cellWidth: 45, halign: 'center' },  // Date / Time
+            2: { cellWidth: 135, halign: 'left' },  // Pickup → Dropoff (widest column for addresses)
+            3: { cellWidth: 35, halign: 'center' },  // Pieces / Weight
+            4: { cellWidth: 30, halign: 'center' },  // Charge
         },
-        margin: { top: 50, left: 14, right: 14 },
-        rowPageBreak: 'avoid'   // Try to keep rows together
+        tableWidth: 'auto',
+        margin: { top: 50, left: 14, right: 14, bottom: 30 },
+        rowPageBreak: 'avoid',   // Try to keep rows together
     });
 
     // Total
@@ -118,7 +137,7 @@ export function InvoiceExportButton({ orders, startDate, endDate, totalAmount }:
             <button onClick={generatePDF}
                 className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition"
             >
-                Export PDF / Email Invoice
+                Export PDF
             </button>
             <button onClick={sendEmail} className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">
                 Email Invoice
