@@ -172,7 +172,7 @@ export function OrderHistoryTable({ orders, isAdmin, currentStatus }: OrderHisto
                                     </p>
                                     {selectedOrder.pickupContactName && selectedOrder.pickupContactPhone && (
                                         <p className="text-sm">
-                                            Contact: {selectedOrder.pickupContactName} ({formatPhone(selectedOrder.pickupContactPhone)})
+                                            Contact: {selectedOrder.pickupContactName} – {formatPhone(selectedOrder.pickupContactPhone)}
                                         </p>
                                     )}
                                 </div>
@@ -182,7 +182,7 @@ export function OrderHistoryTable({ orders, isAdmin, currentStatus }: OrderHisto
                                     <p className="mb-1">{selectedOrder.dropoffAddress}</p>
                                     {selectedOrder.dropoffContactName && selectedOrder.dropoffContactPhone && (
                                         <p className="text-sm">
-                                            Contact: {selectedOrder.dropoffContactName} ({formatPhone(selectedOrder.dropoffContactPhone)})
+                                            Contact: {selectedOrder.dropoffContactName} – {formatPhone(selectedOrder.dropoffContactPhone)}
                                         </p>
                                     )}
                                 </div>

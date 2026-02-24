@@ -65,7 +65,7 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
                             </p>
                             {'pickupContactName' in order && order.pickupContactName && order.pickupContactPhone && (
                                 <p className="text-sm">
-                                    Contact: {order.pickupContactName} ({formatPhone(order.pickupContactPhone)})
+                                    Contact: {order.pickupContactName} – {formatPhone(order.pickupContactPhone)}
                                 </p>
                             )}
                             {/* Customer info – safe for both types */}
@@ -83,7 +83,7 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
                             <p className="mb-1">{order.dropoffAddress}</p>
                             {'dropoffContactName' in order && order.dropoffContactName && order.dropoffContactPhone && (
                                 <p className="text-sm">
-                                    Contact: {order.dropoffContactName} ({formatPhone(order.dropoffContactPhone)})
+                                    Contact: {order.dropoffContactName} – {formatPhone(order.dropoffContactPhone)}
                                 </p>
                             )}
                         </div>
