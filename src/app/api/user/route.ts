@@ -1,11 +1,8 @@
 // src/app/api/user/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-import { PrismaClient } from '@prisma/client';
-
 import { auth } from '@/lib/auth'
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db';
 
 export async function GET() {
     const session = await auth();
