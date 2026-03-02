@@ -1,4 +1,4 @@
-// src/lib/db.ts
+// src/lib/db.ts - redeploy
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
