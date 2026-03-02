@@ -2,7 +2,6 @@
 
 datasource db {
     provider = "postgresql"
-    url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -88,7 +87,7 @@ model Order {
 model OrderHistory {
     id         Int      @id @default(autoincrement())
     orderId    Int
-    order      Order    @relation(fields: [orderId], references: [id])
+    order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
     customerId Int
     status     OrderStatus
     changedById Int?     // nullable if system-generated
