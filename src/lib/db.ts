@@ -16,6 +16,7 @@ const prismaClient = new PrismaClient({
     log: ['query'], // optional – remove in production if too noisy
     adapter,        // ← this satisfies Prisma 7's validation requirement
 });
+console.log('Prisma 7 adapter loaded - build timestamp:', new Date().toISOString());
 
 // In dev: attach to global for hot-reload survival
 if (process.env.NODE_ENV !== 'production') {
